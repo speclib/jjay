@@ -2,9 +2,9 @@ package spawn
 
 import (
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
+
+	"jjay/internal/workspace"
 )
 
 func TestCheckTmuxSession_InsideTmux(t *testing.T) {
@@ -27,31 +27,15 @@ func TestCheckTmuxSession_OutsideTmux(t *testing.T) {
 	}
 }
 
-func TestWorkspaceDir(t *testing.T) {
-	dir, err := workspaceDir("feat-payments")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestWorkspacePackageIntegration(t *testing.T) {
+	// Verify spawn can use workspace package functions
+	wn := workspace.WindowName("feat-payments")
+	if wn != "ws-feat-payments" {
+		t.Errorf("workspace.WindowName() = %q, want %q", wn, "ws-feat-payments")
 	}
-	cwd, _ := os.Getwd()
-	projectName := filepath.Base(cwd)
-	wantSuffix := filepath.Join(projectName+"-workspaces", "feat-payments")
-	if !strings.HasSuffix(dir, wantSuffix) {
-		t.Errorf("workspaceDir() = %q, want suffix %q", dir, wantSuffix)
-	}
-}
 
-func TestWindowName(t *testing.T) {
-	tests := []struct {
-		change string
-		want   string
-	}{
-		{"feat-payments", "ws-feat-payments"},
-		{"add-auth", "ws-add-auth"},
-	}
-	for _, tt := range tests {
-		got := windowName(tt.change)
-		if got != tt.want {
-			t.Errorf("windowName(%q) = %q, want %q", tt.change, got, tt.want)
-		}
+	_, err := workspace.WorkspaceDir("feat-payments")
+	if err != nil {
+		t.Fatalf("workspace.WorkspaceDir() unexpected error: %v", err)
 	}
 }

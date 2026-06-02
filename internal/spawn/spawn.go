@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"jjay/internal/workspace"
 )
 
 // Spawn creates a jj workspace, tmux window, and launches an agent for the given change.
@@ -24,7 +26,7 @@ func Spawn(changeName string) error {
 		return err
 	}
 
-	wsDir, err := workspaceDir(changeName)
+	wsDir, err := workspace.WorkspaceDir(changeName)
 	if err != nil {
 		return err
 	}
@@ -49,25 +51,6 @@ func Spawn(changeName string) error {
 	fmt.Printf("Spawned workspace for change %q in %s\n", changeName, wsDir)
 	fmt.Println("Main workspace is now on a fresh change. Your previous work is in @-.")
 	return nil
-}
-
-func windowName(changeName string) string {
-	return "ws-" + changeName
-}
-
-// workspaceDir returns the absolute path for the workspace directory:
-// ../<project-name>-workspaces/<change-name>
-func workspaceDir(changeName string) (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get working directory: %w", err)
-	}
-	projectName := filepath.Base(cwd)
-	absPath, err := filepath.Abs(filepath.Join(cwd, "..", projectName+"-workspaces", changeName))
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve workspace path: %w", err)
-	}
-	return absPath, nil
 }
 
 // CheckTmuxSession verifies we're running inside a tmux session.
@@ -131,7 +114,7 @@ func checkWorkspaceNotExists(changeName string) error {
 }
 
 func checkWindowNotExists(changeName string) error {
-	wn := windowName(changeName)
+	wn := workspace.WindowName(changeName)
 	out, err := exec.Command("tmux", "list-windows", "-F", "#{window_name}").Output()
 	if err != nil {
 		return fmt.Errorf("failed to list tmux windows: %w", err)
@@ -163,7 +146,7 @@ func createWorkspace(changeName, wsDir string) error {
 }
 
 func createWindow(changeName string) error {
-	wn := windowName(changeName)
+	wn := workspace.WindowName(changeName)
 	cmd := exec.Command("tmux", "new-window", "-d", "-n", wn)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create tmux window %q: %w", wn, err)
@@ -172,7 +155,7 @@ func createWindow(changeName string) error {
 }
 
 func setupPanes(changeName, wsDir string) error {
-	wn := windowName(changeName)
+	wn := workspace.WindowName(changeName)
 
 	// Left pane: cd to workspace and launch claude agent
 	// Use --add-dir to grant access to workspace dir so claude trusts it
