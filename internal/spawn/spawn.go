@@ -29,6 +29,13 @@ func Spawn(changeName string) error {
 		return err
 	}
 
+	// Snapshot uncommitted work by creating a new empty change.
+	// This moves all current work to @- (safe, committed) and leaves
+	// @ empty so nothing is lost if the main workspace becomes stale.
+	if err := snapshotMainWorkspace(); err != nil {
+		return err
+	}
+
 	if err := createWorkspace(changeName, wsDir); err != nil {
 		return err
 	}
@@ -40,6 +47,7 @@ func Spawn(changeName string) error {
 	}
 
 	fmt.Printf("Spawned workspace for change %q in %s\n", changeName, wsDir)
+	fmt.Println("Main workspace is now on a fresh change. Your previous work is in @-.")
 	return nil
 }
 
@@ -97,6 +105,16 @@ func checkOpenspecChange(changeName string) error {
 	return fmt.Errorf("openspec change %q does not exist", changeName)
 }
 
+func snapshotMainWorkspace() error {
+	cmd := exec.Command("jj", "new")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to snapshot main workspace (jj new): %w", err)
+	}
+	return nil
+}
+
 func checkWorkspaceNotExists(changeName string) error {
 	out, err := exec.Command("jj", "workspace", "list").Output()
 	if err != nil {
@@ -133,7 +151,9 @@ func createWorkspace(changeName, wsDir string) error {
 	}
 	// Base the new workspace on @ so it includes uncommitted files
 	// (e.g., the active openspec change directory)
-	cmd := exec.Command("jj", "workspace", "add", "--name", changeName, "--revision", "@", wsDir)
+	// Use @- to get the snapshot created by jj new (contains all files).
+	// Using @ would create a child of the empty new change.
+	cmd := exec.Command("jj", "workspace", "add", "--name", changeName, "--revision", "@-", wsDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
