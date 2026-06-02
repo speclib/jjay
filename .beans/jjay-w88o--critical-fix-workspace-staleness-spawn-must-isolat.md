@@ -2,10 +2,10 @@
 # jjay-w88o
 title: 'CRITICAL: fix workspace staleness — spawn must isolate working copies'
 status: in-progress
-type: task
+type: bug
 priority: critical
 created_at: 2026-06-02T19:47:13Z
-updated_at: 2026-06-02T22:15:00Z
+updated_at: 2026-06-02T20:53:11Z
 ---
 
 jjay spawn uses --revision @ which causes both workspaces to edit the same jj change. When the spawned agent makes changes, the main workspace becomes stale. Running jj workspace update-stale can lose uncommitted work.
