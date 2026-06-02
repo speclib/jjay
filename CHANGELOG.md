@@ -11,6 +11,11 @@
 
 - **`internal/spawn`** — refactored to use shared `workspace` package (no behavior change).
 
+### Fixed
+
+- **CRITICAL: workspace isolation** — spawn now runs `jj new` before creating child workspace, then uses `--revision @-`. Prevents data loss when main workspace becomes stale during concurrent agent work. See [proposal](openspec/changes/archive/2026-06-02-fix-workspace-isolation/proposal.md).
+- **ADR-005**: Workspace isolation via jj new snapshot. See [ADR](openspec/adrs/005-workspace-isolation-via-snapshot.md).
+
 ### Added
 
 - **Release process** — VERSION file as single source of truth, goreleaser for multi-platform builds, GitHub Actions workflow on `v*` tags, interactive release script with gum and nix vendorHash auto-update. See [proposal](openspec/changes/archive/2026-06-02-release-process/proposal.md).

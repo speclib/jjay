@@ -1,7 +1,8 @@
 ---
 # jjay-w88o
 title: 'CRITICAL: fix workspace staleness — spawn must isolate working copies'
-status: in-progress
+status: completed
+openspec-link: openspec/changes/archive/2026-06-02-fix-workspace-isolation
 type: bug
 priority: critical
 created_at: 2026-06-02T19:47:13Z
