@@ -1,6 +1,6 @@
 # ADR-NNN: <!-- title -->
 
-**Status**: Accepted
+**Status**: Proposed
 
 ## Context
 

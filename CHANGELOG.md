@@ -15,3 +15,6 @@
 - **spec-driven-with-adr schema** — forked `spec-driven`, added persistent ADR artifact that generates to `openspec/adrs/`. Includes superseding convention. See [proposal](openspec/changes/archive/2026-06-02-spec-driven-with-adr/proposal.md).
 - **ADR-001**: Use Go as implementation language. See [ADR](openspec/adrs/001-use-go.md).
 - **ADR-002**: OpenSpec config — project context and light rules. See [ADR](openspec/adrs/002-openspec-config.md).
+- **Project scaffold** — Go module, cobra CLI (`jjay version`), Makefile, Nix flake, initial tests. See [proposal](openspec/changes/archive/2026-06-02-project-scaffold/proposal.md).
+- **`jjay spawn <change>`** — create jj workspace, tmux window with two-pane layout, launch claude agent. See [proposal](openspec/changes/archive/2026-06-02-spawn-command/proposal.md).
+- **ADR-003**: Spawn orchestration — sequential subprocess, no rollback. See [ADR](openspec/adrs/003-spawn-orchestration-pattern.md).

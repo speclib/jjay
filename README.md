@@ -67,14 +67,31 @@ jjay will handle all of this with a single command.
 
 ## Installation
 
-Coming soon.
+### Nix
 
-## CLI preview
+```bash
+# Run directly
+nix run github:mipmip/jjay -- version
 
-Planned commands (not yet implemented):
+# Or add to your flake inputs
+```
+
+### From source
+
+```bash
+go install ./cmd/jjay
+```
+
+## CLI
 
 ```
 jjay spawn <change>     Create workspace + tmux window + launch agent
+jjay version            Print version
+```
+
+Planned:
+
+```
 jjay status             Show running agents and their state
 jjay merge <change>     Merge workspace into main
 jjay cleanup <change>   Forget workspace, remove dir, kill window
