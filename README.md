@@ -86,6 +86,7 @@ go install ./cmd/jjay
 
 ```
 jjay spawn <change>     Create workspace + tmux window + launch agent
+jjay cleanup <change>   Tear down workspace + tmux window + directory
 jjay version            Print version
 ```
 
@@ -94,7 +95,6 @@ Planned:
 ```
 jjay status             Show running agents and their state
 jjay merge <change>     Merge workspace into main
-jjay cleanup <change>   Forget workspace, remove dir, kill window
 ```
 
 ## Roadmap

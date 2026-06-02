@@ -4,6 +4,15 @@
 
 ### Added
 
+- **`jjay cleanup <change>`** — tear down spawned workspace: kill tmux window, forget jj workspace, remove directory. Tolerant execution skips missing resources. See [proposal](openspec/changes/archive/2026-06-02-cleanup-command/proposal.md).
+- **`internal/workspace` package** — shared `WindowName()` and `WorkspaceDir()` helpers extracted from spawn, used by both spawn and cleanup.
+
+### Changed
+
+- **`internal/spawn`** — refactored to use shared `workspace` package (no behavior change).
+
+### Added
+
 - **Release process** — VERSION file as single source of truth, goreleaser for multi-platform builds, GitHub Actions workflow on `v*` tags, interactive release script with gum and nix vendorHash auto-update. See [proposal](openspec/changes/archive/2026-06-02-release-process/proposal.md).
 - **ADR-004**: VERSION file as single source of truth. See [ADR](openspec/adrs/004-version-single-source-of-truth.md).
 

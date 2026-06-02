@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"jjay/internal/cleanup"
 	"jjay/internal/spawn"
 )
 
@@ -35,9 +36,19 @@ var spawnCmd = &cobra.Command{
 	},
 }
 
+var cleanupCmd = &cobra.Command{
+	Use:   "cleanup <change-name>",
+	Short: "Tear down workspace + tmux window + directory for a change",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cleanup.Cleanup(args[0])
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(spawnCmd)
+	rootCmd.AddCommand(cleanupCmd)
 }
 
 func main() {
