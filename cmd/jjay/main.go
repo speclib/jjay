@@ -9,7 +9,9 @@ import (
 	"jjay/internal/spawn"
 )
 
-var version = "dev"
+// version is set via ldflags at build time (from VERSION file or git tag).
+// Default value is used for `go run` without ldflags.
+var version = "0.1.0"
 
 var rootCmd = &cobra.Command{
 	Use:   "jjay",

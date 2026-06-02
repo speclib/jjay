@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- **Release process** — VERSION file as single source of truth, goreleaser for multi-platform builds, GitHub Actions workflow on `v*` tags, interactive release script with gum and nix vendorHash auto-update. See [proposal](openspec/changes/archive/2026-06-02-release-process/proposal.md).
+- **ADR-004**: VERSION file as single source of truth. See [ADR](openspec/adrs/004-version-single-source-of-truth.md).
+
+### Changed
+
+- **flake.nix** — reads version from VERSION file, devShell includes goreleaser and gum.
+- **Makefile** — injects version from VERSION file via ldflags.
+
 ### Decisions
 
 - **Go as implementation language** — chosen for team familiarity, CLI ecosystem (cobra, bubbletea), single-binary distribution, and orchestrator-friendly stdlib. See [proposal](openspec/changes/archive/2026-06-02-techstack-go/proposal.md).
