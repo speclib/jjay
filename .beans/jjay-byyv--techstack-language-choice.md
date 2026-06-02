@@ -1,11 +1,12 @@
 ---
 # jjay-byyv
 title: techstack / language choice
-status: todo
+status: completed
+openspec-link: openspec/changes/archive/2026-06-02-techstack-go
 type: task
 priority: normal
 created_at: 2026-06-02T14:30:00Z
-updated_at: 2026-06-02T13:18:04Z
+updated_at: 2026-06-02T15:00:00Z
 ---
 
 Decide on the implementation language for jjay CLI.

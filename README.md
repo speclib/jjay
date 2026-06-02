@@ -58,8 +58,9 @@ tmux kill-window -t "feat/payments"
 
 jjay will handle all of this with a single command.
 
-## Prerequisites
+## Tech stack
 
+- **Go** — single-binary CLI, cobra for commands, bubbletea for future TUI
 - [jj (Jujutsu)](https://martinvonz.github.io/jj/) — version control and workspace isolation
 - [tmux](https://github.com/tmux/tmux) — terminal session and window management
 - [openspec](https://github.com/speclib/openspec) — change tracking and task specs
