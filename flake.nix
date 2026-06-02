@@ -14,11 +14,12 @@
       packages = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          version = builtins.replaceStrings ["\n"] [""] (builtins.readFile ./VERSION);
         in
         {
           default = pkgs.buildGoModule {
             pname = "jjay";
-            version = "0.0.1";
+            inherit version;
 
             src = ./.;
             vendorHash = "sha256-7K17JaXFsjf163g5PXCb5ng2gYdotnZ2IDKk8KFjNj0=";
@@ -28,6 +29,7 @@
             ldflags = [
               "-s"
               "-w"
+              "-X main.version=${version}"
             ];
 
             meta = with pkgs.lib; {
@@ -55,6 +57,8 @@
             buildInputs = with pkgs; [
               go
               gopls
+              goreleaser
+              gum
             ];
           };
         }
