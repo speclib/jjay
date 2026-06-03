@@ -1,7 +1,8 @@
 ---
 # jjay-uxs9
 title: jjay merge command
-status: in-progress
+status: completed
+openspec-link: openspec/changes/archive/2026-06-03-merge-command
 type: task
 priority: normal
 created_at: 2026-06-03T11:48:04Z
