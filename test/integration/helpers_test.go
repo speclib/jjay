@@ -154,6 +154,10 @@ func assertSpawn(t *testing.T, env *testEnv) {
 	// workspace directory exists
 	assertDirExists(t, env.WsDir)
 
+	// both panes have correct working directory
+	assertPaneDir(t, env.SessionName, wn+".0", env.WsDir)
+	assertPaneDir(t, env.SessionName, wn+".1", env.WsDir)
+
 	// agent marker file
 	markerFile := filepath.Join(env.WsDir, "agent-was-here.txt")
 	if !waitForFile(markerFile, 5*time.Second) {
@@ -223,6 +227,20 @@ func assertDirExists(t *testing.T, path string) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		t.Errorf("directory %q does not exist", path)
 	}
+}
+
+func assertPaneDir(t *testing.T, session, pane, expectedDir string) {
+	t.Helper()
+	target := session + ":" + pane
+	out, err := exec.Command("tmux", "display-message", "-p", "-t", target, "#{pane_current_path}").Output()
+	if err != nil {
+		t.Fatalf("failed to get pane dir for %q: %v", target, err)
+	}
+	got := strings.TrimSpace(string(out))
+	if got != expectedDir {
+		t.Errorf("pane %q working dir = %q, want %q", pane, got, expectedDir)
+	}
+	t.Logf("pane %q working dir OK: %s", pane, got)
 }
 
 func assertDirNotExists(t *testing.T, path string) {

@@ -20,11 +20,12 @@ The `jjay spawn <change>` command SHALL first run `jj new` in the main workspace
 - **THEN** an error message is printed indicating the workspace already exists
 
 ### Requirement: Spawn creates tmux window
-The command SHALL create a new tmux window in the current session named `ws-<change>`.
+The command SHALL create a new tmux window in the target session named `ws-<change>` with its starting directory set to the workspace directory via `tmux new-window -c <wsDir>`.
 
-#### Scenario: Window created
+#### Scenario: Window starts in workspace dir
 - **WHEN** `jjay spawn feat-payments` is executed
-- **THEN** a tmux window named `ws-feat-payments` is created in the current tmux session
+- **THEN** the tmux window's starting directory is the workspace directory
+- **THEN** verified via `tmux display-message -p -t <window> '#{pane_current_path}'`
 
 #### Scenario: Window name already taken
 - **WHEN** `jjay spawn feat-payments` is executed and a tmux window named `ws-feat-payments` already exists
@@ -32,13 +33,12 @@ The command SHALL create a new tmux window in the current session named `ws-<cha
 - **THEN** an error message is printed indicating the window name is taken
 
 ### Requirement: Spawn creates two-pane layout
-The tmux window SHALL be split into two panes. The left pane SHALL run the claude agent with `/opsx:apply <change>` and `--add-dir` pointing to the workspace directory (to bypass the trust dialog). The right pane SHALL be a shell cd'd to the workspace directory.
+The tmux window SHALL be split into two panes via `tmux split-window -h -c <wsDir>`. Both panes SHALL have their working directory set to the workspace directory at creation time. The left pane SHALL run the agent command. The right pane SHALL be a plain shell. No `send-keys cd` SHALL be used for setting working directories.
 
-#### Scenario: Two-pane layout
-- **WHEN** `jjay spawn feat-payments` is executed successfully in project `jjay`
-- **THEN** the tmux window has two panes side by side
-- **THEN** the left pane runs `claude "/opsx:apply feat-payments" --dangerously-skip-permissions --add-dir ../jjay-workspaces/feat-payments`
-- **THEN** the right pane is a shell with working directory `../jjay-workspaces/feat-payments`
+#### Scenario: Both panes in workspace dir
+- **WHEN** `jjay spawn feat-payments` is executed successfully
+- **THEN** both pane 0 and pane 1 have working directory set to the workspace directory
+- **THEN** verified via `tmux display-message -p -t <pane> '#{pane_current_path}'`
 
 ### Requirement: Spawn requires openspec change
 The command SHALL verify that an openspec change with the given name exists before proceeding. It uses `openspec list --json` to check.
@@ -103,3 +103,18 @@ The `jjay spawn` and `jjay cleanup` commands SHALL accept a `--workspace-root` f
 #### Scenario: Custom root
 - **WHEN** `jjay spawn --workspace-root /tmp/test-workspaces feat-payments` is executed
 - **THEN** workspace is created at `/tmp/test-workspaces/feat-payments`
+
+### Requirement: Integration test for spawn/cleanup lifecycle
+A Go integration test (build tag `integration`) SHALL test the full lifecycle: spawn with fake agent → verify resources and pane directories → cleanup → verify all resources removed.
+
+#### Scenario: Panes are in correct working directory
+- **WHEN** the integration test inspects panes after spawn
+- **THEN** both panes report the workspace directory as their current path
+
+#### Scenario: Spawn creates all resources
+- **WHEN** the integration test runs spawn with a fake agent
+- **THEN** a jj workspace exists, tmux window exists, workspace directory exists, agent marker file exists
+
+#### Scenario: Cleanup removes all resources
+- **WHEN** the integration test runs cleanup after spawn
+- **THEN** tmux window, jj workspace, and workspace directory are all gone

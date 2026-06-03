@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- **tmux pane working directories** — spawn now uses `tmux new-window -c` and `split-window -c` to set pane working directories at creation time, replacing the racy `send-keys cd` approach. Both panes reliably start in the workspace directory. See [proposal](openspec/changes/archive/2026-06-03-fix-pane-dirs/proposal.md).
+- **Integration test: pane directory assertion** — added `assertPaneDir` to verify both panes report the correct working directory via `tmux display-message #{pane_current_path}`.
+
 ### Added
 
 - **`jjay session-open <path>`** — create and switch to a dedicated tmux session (`jjay-><dirname>`) for a jj repo. Validates jj repo, prevents duplicate sessions. See [proposal](openspec/changes/archive/2026-06-03-session-open/proposal.md).
