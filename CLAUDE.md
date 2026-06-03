@@ -34,6 +34,14 @@ Besides updating status and openspec-link, you are NOT ALLOWED to modify the con
 
 ## OpenSpec Archive triggers
 
-WHEN /opsx:archive is called the work should be made ready for merging in bookmark main. 
-- jj describe
-- the changelog should also be updated
+WHEN /opsx:archive is called the work should be made ready for merging in bookmark main.
+
+Run these steps in order:
+
+1. **Blog gate (auto-create).** Before anything else, check `openspec status --change "<name>" --json`. If the `blog` artifact is not `done`:
+   - Run `openspec instructions blog --change "<name>" --json` to get the template and context.
+   - Write the blog **retrospectively**: read `proposal.md` and the completed `tasks.md` for context, and narrate what was *actually* built (the outcome), not just what was planned.
+   - Re-check `openspec status` to confirm `blog` is now `done` before proceeding.
+   - Only `blog` is auto-created. Other incomplete artifacts (e.g. `adr`) remain **warn-only** — surface them as a warning and let the user confirm proceeding, do not auto-create them.
+2. jj describe
+3. the changelog should also be updated

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **Archive blog gate** — `/opsx:archive` now auto-creates a missing `blog` artifact before archiving (via the "OpenSpec Archive triggers" section in `CLAUDE.md`), instead of only warning. The blog is written retrospectively from `proposal.md` and completed `tasks.md`; other incomplete artifacts (e.g. `adr`) stay warn-only. See [proposal](openspec/changes/archive/2026-06-04-fix-devlog-archive-gate/proposal.md).
+
 ### Fixed
 
 - **`jjay merge` silently dropped files** — merge now rebases the workspace onto current main (`jj rebase -b <change>@ -d main`) before creating the merge commit, eliminating jj's 3-way silent file picking that lost task progress, blog posts, and beans. Conflicts are surfaced explicitly and abort the merge. Adds 6 e2e merge scenarios. See [proposal](openspec/changes/archive/2026-06-04-rebase-before-merge/proposal.md) and [ADR-007](openspec/adrs/007-rebase-before-merge.md).
