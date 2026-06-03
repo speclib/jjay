@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.1 - 2026-06-03
+
 ### Added
 
 - **`make coverage` target** — runs unit tests with `-coverprofile`, generates HTML report, prints coverage percentage. See [proposal](openspec/changes/archive/2026-06-03-add-test-coverage/proposal.md).
