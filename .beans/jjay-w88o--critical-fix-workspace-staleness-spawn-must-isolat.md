@@ -2,11 +2,11 @@
 # jjay-w88o
 title: 'CRITICAL: fix workspace staleness — spawn must isolate working copies'
 status: completed
-openspec-link: openspec/changes/archive/2026-06-02-fix-workspace-isolation
 type: bug
 priority: critical
 created_at: 2026-06-02T19:47:13Z
-updated_at: 2026-06-02T20:53:11Z
+updated_at: 2026-06-03T15:07:40Z
+parent: jjay-qmpg
 ---
 
 jjay spawn uses --revision @ which causes both workspaces to edit the same jj change. When the spawned agent makes changes, the main workspace becomes stale. Running jj workspace update-stale can lose uncommitted work.
