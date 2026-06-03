@@ -25,7 +25,7 @@ func TestWindowName(t *testing.T) {
 }
 
 func TestWorkspaceDir(t *testing.T) {
-	dir, err := WorkspaceDir("feat-payments")
+	dir, err := WorkspaceDir("feat-payments", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

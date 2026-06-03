@@ -10,11 +10,6 @@ A Go integration test (build tag `integration`) SHALL test the complete spawn â†
 - **THEN** the workspace directory exists and contains project files
 - **THEN** the fake agent's output file exists in the workspace
 
-#### Scenario: Panes are in correct working directory
-- **WHEN** the integration test inspects the tmux panes after spawn
-- **THEN** both panes have their working directory set to the workspace directory
-- **THEN** this is verified via `tmux display-message -p -t <pane> '#{pane_current_path}'`
-
 #### Scenario: Cleanup removes all resources
 - **WHEN** the integration test runs `Cleanup()` after spawn
 - **THEN** the tmux window no longer exists

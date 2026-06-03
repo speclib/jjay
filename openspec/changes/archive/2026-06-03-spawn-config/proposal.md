@@ -14,7 +14,6 @@ Spawn currently hardcodes the agent command (claude), tmux session (current), an
 
 ## What Changes
 
-- **Fix: shell pane working directory** (jjay-ps3d) — use `tmux split-window -c <wsDir>` and `tmux new-window -c <wsDir>` instead of `send-keys cd`. Eliminates race condition where shell hasn't initialized when `cd` arrives.
 - Add `--agent` flag to spawn (default: `claude "/opsx:apply <change>" --dangerously-skip-permissions --add-dir <wsDir>`)
 - Add `--session` flag to spawn and cleanup (default: current tmux session)
 - Add `--workspace-root` flag to spawn and cleanup (default: `../<project>-workspaces`)
@@ -22,7 +21,6 @@ Spawn currently hardcodes the agent command (claude), tmux session (current), an
 - Create a fake agent script for testing
 - Add Go integration tests (build tag `integration`) covering spawn → verify → cleanup → verify lifecycle
 - Integration test creates its own tmux session and temp jj repo
-- Integration test asserts both panes are in the correct workspace directory
 
 ## Capabilities
 
@@ -41,5 +39,5 @@ Spawn currently hardcodes the agent command (claude), tmux session (current), an
 - Modified: `internal/spawn/spawn.go`, `internal/cleanup/cleanup.go`, `internal/workspace/workspace.go`
 - Modified: `cmd/jjay/main.go` (add flags to spawn and cleanup subcommands)
 - New: `testdata/fake-agent.sh`
-- New: `internal/spawn/spawn_integration_test.go`
+- New: `test/integration/full_lifecycle_test.go`, `test/integration/helpers_test.go`
 - No new Go dependencies
