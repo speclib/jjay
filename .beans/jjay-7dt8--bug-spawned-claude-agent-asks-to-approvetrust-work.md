@@ -1,7 +1,7 @@
 ---
 # jjay-7dt8
 title: 'BUG: spawned claude agent asks to approve/trust workspace directory'
-status: todo
+status: deferred
 type: bug
 priority: high
 created_at: 2026-06-03T19:24:05Z
@@ -12,4 +12,9 @@ When jjay spawn launches claude in a workspace, claude still asks the user to tr
 
 Discovered: 2026-06-02 during spawn testing.
 Current workaround: user manually approves in each spawned session.
-Needs investigation: how to pre-trust a directory for Claude Code.
+Upstream issues to track:
+- https://github.com/anthropics/claude-code/issues/45298 (feature request: --trust-cwd flag)
+- https://github.com/anthropics/claude-code/issues/28506 (bug: --dangerously-skip-permissions doesn't bypass trust)
+
+Blocked on Anthropic. No clean workaround exists — tmux send-keys timing hacks are too fragile.
+Workaround for now: manually approve trust in each spawned session.
