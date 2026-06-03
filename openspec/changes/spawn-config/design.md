@@ -53,6 +53,17 @@ type SpawnOptions struct {
 }
 ```
 
+### Fix: tmux pane working directories (jjay-ps3d)
+
+Current code uses `send-keys "cd <wsDir>"` to set the working directory for the right pane. This races with shell initialization — fish/bash may not be ready when the `cd` arrives.
+
+Fix: use tmux's `-c` flag to set the starting directory at pane creation time:
+- `tmux new-window -d -n ws-X -c <wsDir>` — window starts in workspace dir
+- `tmux split-window -h -t ws-X -c <wsDir>` — right pane starts in workspace dir
+- Remove `send-keys cd` for the right pane entirely
+
+The left pane still needs `send-keys` to launch the agent command, but the `cd` prefix is no longer needed since the window already starts in the workspace dir.
+
 ### Integration test setup
 
 ```
@@ -66,6 +77,7 @@ Test setup:
 Test body:
   1. Spawn(changeName, opts) with fake agent, test session, temp workspace root
   2. Assert: tmux window exists, jj workspace exists, dir exists, agent marker file exists
+  3. Assert: both panes have correct working directory (tmux display-message #{pane_current_path})
   3. Cleanup(changeName, opts) with test session, temp workspace root
   4. Assert: all gone
 
