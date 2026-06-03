@@ -52,7 +52,7 @@ func Spawn(changeName string, opts SpawnOptions) error {
 	if err := createWorkspace(changeName, wsDir); err != nil {
 		return err
 	}
-	if err := createWindow(changeName, opts.Session); err != nil {
+	if err := createWindow(changeName, opts.Session, wsDir); err != nil {
 		return err
 	}
 	if err := setupPanes(changeName, wsDir, opts); err != nil {
@@ -160,9 +160,9 @@ func createWorkspace(changeName, wsDir string) error {
 	return nil
 }
 
-func createWindow(changeName, session string) error {
+func createWindow(changeName, session, wsDir string) error {
 	wn := workspace.WindowName(changeName)
-	args := []string{"new-window", "-d", "-n", wn}
+	args := []string{"new-window", "-d", "-n", wn, "-c", wsDir}
 	if session != "" {
 		args = append(args, "-t", session+":")
 	}
@@ -198,24 +198,18 @@ func setupPanes(changeName, wsDir string, opts SpawnOptions) error {
 	if agentTemplate == "" {
 		agentTemplate = DefaultAgentCommand
 	}
-	agentCmd := "cd " + wsDir + " && " + resolveAgentCommand(agentTemplate, changeName, wsDir)
+	agentCmd := resolveAgentCommand(agentTemplate, changeName, wsDir)
 
-	// Left pane: cd to workspace and launch agent
+	// Left pane: launch agent (window already starts in wsDir via -c flag)
 	cmd := exec.Command("tmux", "send-keys", "-t", target, agentCmd, "Enter")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to launch agent in left pane: %w", err)
 	}
 
-	// Split to create right pane
-	cmd = exec.Command("tmux", "split-window", "-h", "-t", target)
+	// Split to create right pane (starts in wsDir via -c flag)
+	cmd = exec.Command("tmux", "split-window", "-h", "-t", target, "-c", wsDir)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to split tmux window: %w", err)
-	}
-
-	// Right pane: cd to workspace
-	cmd = exec.Command("tmux", "send-keys", "-t", target+".1", "cd "+wsDir, "Enter")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to set up shell pane: %w", err)
 	}
 
 	return nil

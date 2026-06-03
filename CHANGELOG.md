@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- **tmux pane working directories** — spawn now uses `tmux new-window -c` and `split-window -c` to set pane working directories at creation time, replacing the racy `send-keys cd` approach. Both panes reliably start in the workspace directory. See [proposal](openspec/changes/archive/2026-06-03-fix-pane-dirs/proposal.md).
+- **Integration test: pane directory assertion** — added `assertPaneDir` to verify both panes report the correct working directory via `tmux display-message #{pane_current_path}`.
+
 ### Added
 
 - **Configurable spawn** — `--agent`, `--session`, `--workspace-root` flags on spawn; `--session`, `--workspace-root` flags on cleanup. Enables custom agents, dedicated tmux sessions, and flexible workspace locations. See [proposal](openspec/changes/archive/2026-06-03-spawn-config/proposal.md).
