@@ -39,5 +39,5 @@ Spawn currently hardcodes the agent command (claude), tmux session (current), an
 - Modified: `internal/spawn/spawn.go`, `internal/cleanup/cleanup.go`, `internal/workspace/workspace.go`
 - Modified: `cmd/jjay/main.go` (add flags to spawn and cleanup subcommands)
 - New: `testdata/fake-agent.sh`
-- New: `internal/spawn/spawn_integration_test.go`
+- New: `test/integration/full_lifecycle_test.go`, `test/integration/helpers_test.go`
 - No new Go dependencies

@@ -9,24 +9,41 @@ import (
 	"jjay/internal/workspace"
 )
 
+// CleanupOptions holds configurable parameters for Cleanup.
+type CleanupOptions struct {
+	Session       string // tmux session name (empty = current)
+	WorkspaceRoot string // override workspace root (empty = default)
+}
+
 // Cleanup tears down a spawned workspace: kills tmux window, forgets jj workspace,
 // removes workspace directory. Each step is tolerant — missing resources are skipped.
-func Cleanup(changeName string) error {
+func Cleanup(changeName string, opts CleanupOptions) error {
 	fmt.Printf("Cleaning up change %q...\n", changeName)
 
 	// Order: tmux → jj → directory (kill agent first, then clean up state)
-	killWindow(changeName)
+	killWindow(changeName, opts.Session)
 	forgetWorkspace(changeName)
-	removeDirectory(changeName)
+	removeDirectory(changeName, opts.WorkspaceRoot)
 
 	return nil
 }
 
-func killWindow(changeName string) {
+func tmuxTarget(session, window string) string {
+	if session != "" {
+		return session + ":" + window
+	}
+	return window
+}
+
+func killWindow(changeName, session string) {
 	wn := workspace.WindowName(changeName)
 
 	// Check if window exists
-	out, err := exec.Command("tmux", "list-windows", "-F", "#{window_name}").Output()
+	args := []string{"list-windows", "-F", "#{window_name}"}
+	if session != "" {
+		args = append(args, "-t", session)
+	}
+	out, err := exec.Command("tmux", args...).Output()
 	if err != nil {
 		fmt.Printf("  tmux window %s: not found, skipped\n", wn)
 		return
@@ -45,7 +62,8 @@ func killWindow(changeName string) {
 		return
 	}
 
-	cmd := exec.Command("tmux", "kill-window", "-t", wn)
+	target := tmuxTarget(session, wn)
+	cmd := exec.Command("tmux", "kill-window", "-t", target)
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("  tmux window %s: failed to kill (%v), skipped\n", wn, err)
 		return
@@ -85,8 +103,8 @@ func forgetWorkspace(changeName string) {
 	fmt.Printf("  jj workspace %s: forgotten\n", changeName)
 }
 
-func removeDirectory(changeName string) {
-	wsDir, err := workspace.WorkspaceDir(changeName)
+func removeDirectory(changeName, workspaceRoot string) {
+	wsDir, err := workspace.WorkspaceDir(changeName, workspaceRoot)
 	if err != nil {
 		fmt.Printf("  workspace directory: failed to resolve path (%v), skipped\n", err)
 		return

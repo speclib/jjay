@@ -34,7 +34,7 @@ func TestWorkspacePackageIntegration(t *testing.T) {
 		t.Errorf("workspace.WindowName() = %q, want %q", wn, "ws-feat-payments")
 	}
 
-	_, err := workspace.WorkspaceDir("feat-payments")
+	_, err := workspace.WorkspaceDir("feat-payments", "")
 	if err != nil {
 		t.Fatalf("workspace.WorkspaceDir() unexpected error: %v", err)
 	}

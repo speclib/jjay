@@ -11,10 +11,21 @@ import (
 	"jjay/internal/workspace"
 )
 
+// SpawnOptions holds configurable parameters for Spawn.
+type SpawnOptions struct {
+	Agent         string // agent command template (with {change} and {wsdir} placeholders)
+	Session       string // tmux session name (empty = current)
+	WorkspaceRoot string // override workspace root (empty = default)
+}
+
 // Spawn creates a jj workspace, tmux window, and launches an agent for the given change.
-func Spawn(changeName string) error {
-	if err := checkTmuxSession(); err != nil {
-		return err
+func Spawn(changeName string, opts SpawnOptions) error {
+	// Only check TMUX env when not targeting a specific session.
+	// When --session is set, we target that session directly.
+	if opts.Session == "" {
+		if err := checkTmuxSession(); err != nil {
+			return err
+		}
 	}
 	if err := checkOpenspecChange(changeName); err != nil {
 		return err
@@ -22,11 +33,11 @@ func Spawn(changeName string) error {
 	if err := checkWorkspaceNotExists(changeName); err != nil {
 		return err
 	}
-	if err := checkWindowNotExists(changeName); err != nil {
+	if err := checkWindowNotExists(changeName, opts.Session); err != nil {
 		return err
 	}
 
-	wsDir, err := workspace.WorkspaceDir(changeName)
+	wsDir, err := workspace.WorkspaceDir(changeName, opts.WorkspaceRoot)
 	if err != nil {
 		return err
 	}
@@ -41,10 +52,10 @@ func Spawn(changeName string) error {
 	if err := createWorkspace(changeName, wsDir); err != nil {
 		return err
 	}
-	if err := createWindow(changeName); err != nil {
+	if err := createWindow(changeName, opts.Session); err != nil {
 		return err
 	}
-	if err := setupPanes(changeName, wsDir); err != nil {
+	if err := setupPanes(changeName, wsDir, opts); err != nil {
 		return err
 	}
 
@@ -113,9 +124,13 @@ func checkWorkspaceNotExists(changeName string) error {
 	return nil
 }
 
-func checkWindowNotExists(changeName string) error {
+func checkWindowNotExists(changeName, session string) error {
 	wn := workspace.WindowName(changeName)
-	out, err := exec.Command("tmux", "list-windows", "-F", "#{window_name}").Output()
+	args := []string{"list-windows", "-F", "#{window_name}"}
+	if session != "" {
+		args = append(args, "-t", session)
+	}
+	out, err := exec.Command("tmux", args...).Output()
 	if err != nil {
 		return fmt.Errorf("failed to list tmux windows: %w", err)
 	}
@@ -145,37 +160,60 @@ func createWorkspace(changeName, wsDir string) error {
 	return nil
 }
 
-func createWindow(changeName string) error {
+func createWindow(changeName, session string) error {
 	wn := workspace.WindowName(changeName)
-	cmd := exec.Command("tmux", "new-window", "-d", "-n", wn)
+	args := []string{"new-window", "-d", "-n", wn}
+	if session != "" {
+		args = append(args, "-t", session+":")
+	}
+	cmd := exec.Command("tmux", args...)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create tmux window %q: %w", wn, err)
 	}
 	return nil
 }
 
-func setupPanes(changeName, wsDir string) error {
-	wn := workspace.WindowName(changeName)
+// DefaultAgentCommand is the default agent command template.
+const DefaultAgentCommand = `claude "/opsx:apply {change}" --dangerously-skip-permissions --add-dir {wsdir}`
 
-	// Left pane: cd to workspace and launch claude agent
-	// Use --add-dir to grant access to workspace dir so claude trusts it
-	agentCmd := fmt.Sprintf(
-		"cd %s && claude \"/opsx:apply %s\" --dangerously-skip-permissions --add-dir %s",
-		wsDir, changeName, wsDir,
-	)
-	cmd := exec.Command("tmux", "send-keys", "-t", wn, agentCmd, "Enter")
+// resolveAgentCommand substitutes {change} and {wsdir} placeholders in the agent command.
+func resolveAgentCommand(template, changeName, wsDir string) string {
+	r := strings.NewReplacer("{change}", changeName, "{wsdir}", wsDir)
+	return r.Replace(template)
+}
+
+func tmuxTarget(session, window string) string {
+	if session != "" {
+		return session + ":" + window
+	}
+	return window
+}
+
+func setupPanes(changeName, wsDir string, opts SpawnOptions) error {
+	wn := workspace.WindowName(changeName)
+	target := tmuxTarget(opts.Session, wn)
+
+	// Resolve agent command
+	agentTemplate := opts.Agent
+	if agentTemplate == "" {
+		agentTemplate = DefaultAgentCommand
+	}
+	agentCmd := "cd " + wsDir + " && " + resolveAgentCommand(agentTemplate, changeName, wsDir)
+
+	// Left pane: cd to workspace and launch agent
+	cmd := exec.Command("tmux", "send-keys", "-t", target, agentCmd, "Enter")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to launch agent in left pane: %w", err)
 	}
 
 	// Split to create right pane
-	cmd = exec.Command("tmux", "split-window", "-h", "-t", wn)
+	cmd = exec.Command("tmux", "split-window", "-h", "-t", target)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to split tmux window: %w", err)
 	}
 
 	// Right pane: cd to workspace
-	cmd = exec.Command("tmux", "send-keys", "-t", wn+".1", "cd "+wsDir, "Enter")
+	cmd = exec.Command("tmux", "send-keys", "-t", target+".1", "cd "+wsDir, "Enter")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to set up shell pane: %w", err)
 	}

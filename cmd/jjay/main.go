@@ -27,21 +27,39 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+var (
+	spawnAgent         string
+	spawnSession       string
+	spawnWorkspaceRoot string
+)
+
 var spawnCmd = &cobra.Command{
 	Use:   "spawn <change-name>",
 	Short: "Create workspace + tmux window + launch agent",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return spawn.Spawn(args[0])
+		return spawn.Spawn(args[0], spawn.SpawnOptions{
+			Agent:         spawnAgent,
+			Session:       spawnSession,
+			WorkspaceRoot: spawnWorkspaceRoot,
+		})
 	},
 }
+
+var (
+	cleanupSession       string
+	cleanupWorkspaceRoot string
+)
 
 var cleanupCmd = &cobra.Command{
 	Use:   "cleanup <change-name>",
 	Short: "Tear down workspace + tmux window + directory for a change",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return cleanup.Cleanup(args[0])
+		return cleanup.Cleanup(args[0], cleanup.CleanupOptions{
+			Session:       cleanupSession,
+			WorkspaceRoot: cleanupWorkspaceRoot,
+		})
 	},
 }
 
@@ -49,6 +67,13 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(spawnCmd)
 	rootCmd.AddCommand(cleanupCmd)
+
+	spawnCmd.Flags().StringVar(&spawnAgent, "agent", "", "agent command template (placeholders: {change}, {wsdir})")
+	spawnCmd.Flags().StringVar(&spawnSession, "session", "", "tmux session to target (default: current)")
+	spawnCmd.Flags().StringVar(&spawnWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")
+
+	cleanupCmd.Flags().StringVar(&cleanupSession, "session", "", "tmux session to target (default: current)")
+	cleanupCmd.Flags().StringVar(&cleanupWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")
 }
 
 func main() {
