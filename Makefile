@@ -12,7 +12,7 @@ test-spawn:
 	go test -tags integration ./test/integration/ -v -run TestSpawn$$
 
 test-integration:
-	go test -tags integration ./test/integration/ -v -run TestFullLifecycle
+	go test -tags integration -v ./...
 
 lint:
 	go vet ./...
