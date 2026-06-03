@@ -150,6 +150,33 @@ artifacts:
     requires:
       - proposal
 
+  - id: blog
+    generates: "blog/*.md"
+    description: Devblog post narrated by Kaa — synced to devblog/posts/ at archive time
+    template: blog.md
+    instruction: |
+      Write a short devblog post narrated by Kaa, the project mascot (a Eurasian Jay
+      in a jujutsu gi). Kaa speaks in first person, is brutaal, bossy, and commands
+      his flock of AI agents.
+
+      Structure:
+      ```
+      # <Title>
+
+      <One-line hook>
+
+      <2-4 short paragraphs: what was built, why, what's next>
+      ```
+
+      No frontmatter, no metadata. Keep it raw and punchy.
+      Each post covers one change and stands on its own.
+      Focus on what and why, not implementation details.
+
+      File naming: `blog/<slug>.md` where slug matches the change name.
+      At archive time, posts are synced to `devblog/posts/<date>-<slug>.md`.
+    requires:
+      - proposal
+
   - id: tasks
     generates: tasks.md
     description: Implementation checklist with trackable tasks

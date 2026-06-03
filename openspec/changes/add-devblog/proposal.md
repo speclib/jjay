@@ -6,7 +6,7 @@
 
 ## Why
 
-The development of jjay is an interesting journey — choosing a language, building an orchestrator, hitting bugs, evolving the workflow. This raw material should be captured as it happens, not reconstructed later. An AI-generated devblog narrated by the project mascot Kaa (a Eurasian Jay in a karate gi) makes this transparent and fun.
+The development of jjay is an interesting journey — choosing a language, building an orchestrator, hitting bugs, evolving the workflow. This raw material should be captured as it happens, not reconstructed later. An AI-generated devblog narrated by the project mascot Kaa (a Eurasian Jay in a jujutsu gi) makes this transparent and fun.
 
 ## What Changes
 

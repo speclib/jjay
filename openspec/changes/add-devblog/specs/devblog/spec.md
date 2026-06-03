@@ -12,7 +12,7 @@ The `spec-driven-with-adr` schema SHALL include a `blog` artifact that generates
 - **THEN** the `blog` artifact requires `proposal`
 
 ### Requirement: Blog post persona
-All blog posts SHALL be narrated by Kaa, the project mascot (a Eurasian Jay / vlaamse gaai in a karate gi). Posts SHALL use first person ("I", "my flock"), a brutaal and bossy tone, and be transparently AI-generated.
+All blog posts SHALL be narrated by Kaa, the project mascot (a Eurasian Jay / vlaamse gaai in a jujutsu gi). Posts SHALL use first person ("I", "my flock"), a brutaal and bossy tone, and be transparently AI-generated.
 
 #### Scenario: Post voice
 - **WHEN** a blog post is generated

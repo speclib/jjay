@@ -1,6 +1,6 @@
 ## Context
 
-jjay's development journey is worth capturing — language choices, architecture decisions, bugs encountered. Rather than writing a blog post-hoc, we capture raw material as each change is made. The narrator is Kaa, the project mascot: a Eurasian Jay (vlaamse gaai) in a karate gi, who commands a flock of AI agents.
+jjay's development journey is worth capturing — language choices, architecture decisions, bugs encountered. Rather than writing a blog post-hoc, we capture raw material as each change is made. The narrator is Kaa, the project mascot: a Eurasian Jay (vlaamse gaai) in a jujutsu gi, who commands a flock of AI agents.
 
 ## Goals / Non-Goals
 
