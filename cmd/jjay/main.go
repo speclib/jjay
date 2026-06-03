@@ -8,6 +8,7 @@ import (
 
 	"jjay/internal/cleanup"
 	"jjay/internal/merge"
+	"jjay/internal/session"
 	"jjay/internal/spawn"
 )
 
@@ -56,6 +57,15 @@ var mergeCmd = &cobra.Command{
 	},
 }
 
+var sessionOpenCmd = &cobra.Command{
+	Use:   "session-open <path>",
+	Short: "Create and switch to a tmux session for a jj repo",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return session.Open(args[0])
+	},
+}
+
 var (
 	cleanupSession       string
 	cleanupWorkspaceRoot string
@@ -77,6 +87,7 @@ func init() {
 	rootCmd.AddCommand(spawnCmd)
 	rootCmd.AddCommand(mergeCmd)
 	rootCmd.AddCommand(cleanupCmd)
+	rootCmd.AddCommand(sessionOpenCmd)
 
 	spawnCmd.Flags().StringVar(&spawnAgent, "agent", "", "agent command template (placeholders: {change}, {wsdir})")
 	spawnCmd.Flags().StringVar(&spawnSession, "session", "", "tmux session to target (default: current)")

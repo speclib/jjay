@@ -3,9 +3,10 @@
 title: jjay cleanup command
 status: completed
 type: task
-openspec-link: openspec/changes/archive/2026-06-02-cleanup-command
+priority: normal
 created_at: 2026-06-02T16:56:20Z
-updated_at: 2026-06-02T23:00:00Z
+updated_at: 2026-06-03T15:07:40Z
+parent: jjay-qmpg
 ---
 
 Implement jjay cleanup <change> to reverse spawn: jj workspace forget, rm -rf workspace dir, tmux kill-window. Mirrors the manual cleanup steps.

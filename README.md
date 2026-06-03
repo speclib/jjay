@@ -85,9 +85,10 @@ go install ./cmd/jjay
 ## CLI
 
 ```
-jjay spawn <change>     Create workspace + tmux window + launch agent
-jjay cleanup <change>   Tear down workspace + tmux window + directory
-jjay version            Print version
+jjay session-open <path>  Create and switch to a tmux session for a jj repo
+jjay spawn <change>       Create workspace + tmux window + launch agent
+jjay cleanup <change>     Tear down workspace + tmux window + directory
+jjay version              Print version
 ```
 
 Planned:

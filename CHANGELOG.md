@@ -4,9 +4,11 @@
 
 ### Added
 
+- **`jjay session-open <path>`** — create and switch to a dedicated tmux session (`jjay-><dirname>`) for a jj repo. Validates jj repo, prevents duplicate sessions. See [proposal](openspec/changes/archive/2026-06-03-session-open/proposal.md).
 - **Configurable spawn** — `--agent`, `--session`, `--workspace-root` flags on spawn; `--session`, `--workspace-root` flags on cleanup. Enables custom agents, dedicated tmux sessions, and flexible workspace locations. See [proposal](openspec/changes/archive/2026-06-03-spawn-config/proposal.md).
 - **Integration test** — full spawn → cleanup lifecycle test using fake agent, isolated tmux session, and temp jj repo (`go test -tags integration`). See [proposal](openspec/changes/archive/2026-06-03-spawn-config/proposal.md).
 - **ADR-006**: Configuration via CLI flags, not config file. See [ADR](openspec/adrs/006-config-via-flags-not-file.md).
+- **`jjay merge <change>`** — merge a workspace's work into main: resolve workspace change via jj revset, create merge commit, move bookmark, create fresh change. See [proposal](openspec/changes/archive/2026-06-03-merge-command/proposal.md).
 
 ### Added
 
