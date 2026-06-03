@@ -9,6 +9,7 @@
 
 ### Added
 
+- **Devblog with Kaa persona** — blog artifact in schema, retroactive posts for 2026-06-02 work. Kaa (Eurasian Jay in jujutsu gi) narrates in first person. See [proposal](openspec/changes/archive/2026-06-03-add-devblog/proposal.md).
 - **`jjay session-open <path>`** — create and switch to a dedicated tmux session (`jjay-><dirname>`) for a jj repo. Validates jj repo, prevents duplicate sessions. See [proposal](openspec/changes/archive/2026-06-03-session-open/proposal.md).
 - **Configurable spawn** — `--agent`, `--session`, `--workspace-root` flags on spawn; `--session`, `--workspace-root` flags on cleanup. Enables custom agents, dedicated tmux sessions, and flexible workspace locations. See [proposal](openspec/changes/archive/2026-06-03-spawn-config/proposal.md).
 - **Integration test** — full spawn → cleanup lifecycle test using fake agent, isolated tmux session, and temp jj repo (`go test -tags integration`). See [proposal](openspec/changes/archive/2026-06-03-spawn-config/proposal.md).

@@ -1,7 +1,8 @@
 ---
 # jjay-0mni
 title: at merge write a new section in the devblog
-status: in-progress
+status: completed
+openspec-link: openspec/changes/archive/2026-06-03-add-devblog
 type: task
 priority: normal
 created_at: 2026-06-02T14:36:44Z
