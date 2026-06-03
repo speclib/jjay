@@ -1,11 +1,11 @@
 ---
 # jjay-0mni
 title: at merge write a new section in the devblog
-status: draft
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-06-02T14:36:44Z
-updated_at: 2026-06-02T14:40:36Z
+updated_at: 2026-06-03T00:00:00Z
 ---
 
 this is an experiment:
