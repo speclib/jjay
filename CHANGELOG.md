@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-06-03
+
 ### Fixed
 
 - **tmux pane working directories** — spawn now uses `tmux new-window -c` and `split-window -c` to set pane working directories at creation time, replacing the racy `send-keys cd` approach. Both panes reliably start in the workspace directory. See [proposal](openspec/changes/archive/2026-06-03-fix-pane-dirs/proposal.md).

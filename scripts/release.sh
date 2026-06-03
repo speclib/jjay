@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# jjay release script — jj only, no git commands
+
 # --- Safety checks ---
 
 if ! command -v gum &>/dev/null; then
@@ -8,14 +10,24 @@ if ! command -v gum &>/dev/null; then
   exit 1
 fi
 
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "Error: working tree is dirty. Commit or stash changes first."
+if ! command -v jj &>/dev/null; then
+  echo "Error: jj is required."
   exit 1
 fi
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$BRANCH" != "main" ]]; then
-  echo "Error: not on main branch (currently on $BRANCH)."
+# Check working copy is clean (empty)
+if jj status 2>/dev/null | grep -q "Working copy changes:"; then
+  echo "Error: working copy has uncommitted changes. Run 'jj new' first."
+  exit 1
+fi
+
+# Check main bookmark points to current parent
+MAIN_COMMIT=$(jj log -r "main" --no-graph -T 'commit_id.short(12)' 2>/dev/null)
+PARENT_COMMIT=$(jj log -r "@-" --no-graph -T 'commit_id.short(12)' 2>/dev/null)
+if [[ "$MAIN_COMMIT" != "$PARENT_COMMIT" ]]; then
+  echo "Error: not on main. Current parent is not the main bookmark."
+  echo "  main:   $MAIN_COMMIT"
+  echo "  parent: $PARENT_COMMIT"
   exit 1
 fi
 
@@ -44,7 +56,8 @@ esac
 NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
 TAG="v${NEW_VERSION}"
 
-if git tag -l "$TAG" | grep -q "$TAG"; then
+# Check tag doesn't exist (via git tags, which jj exports to)
+if git tag -l "$TAG" 2>/dev/null | grep -q "$TAG"; then
   echo "Error: tag $TAG already exists."
   exit 1
 fi
@@ -66,32 +79,33 @@ sed -i "s/## Unreleased/## Unreleased\n\n## ${NEW_VERSION} - ${DATE}/" CHANGELOG
 if command -v nix &>/dev/null; then
   echo "Updating nix vendorHash..."
 
-  # Set a fake hash to trigger the build error with the correct hash
   FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
   sed -i "s|vendorHash = \".*\"|vendorHash = \"${FAKE_HASH}\"|" flake.nix
 
-  # Build and capture the expected hash from stderr
   CORRECT_HASH=$(nix build 2>&1 | grep -oP 'got:\s+\Ksha256-[A-Za-z0-9+/=]+' | head -1) || true
 
   if [[ -n "$CORRECT_HASH" ]]; then
     sed -i "s|vendorHash = \".*\"|vendorHash = \"${CORRECT_HASH}\"|" flake.nix
     echo "Updated vendorHash to: $CORRECT_HASH"
   else
-    echo "Warning: could not determine correct vendorHash. Restoring original."
-    git checkout -- flake.nix
+    echo "Warning: could not determine correct vendorHash."
+    jj restore --from @- -- flake.nix
   fi
 else
   echo "Warning: nix not installed, skipping vendorHash update."
 fi
 
-# --- Git commit, tag, push ---
+# --- Describe, bookmark, tag, push ---
 
-git add VERSION CHANGELOG.md flake.nix
-git commit -m "release: v${NEW_VERSION}"
+jj describe -m "release: v${NEW_VERSION}"
+jj bookmark set main -r @
+jj new
+
+# Create git tag (jj doesn't have native tags, use git via jj's colocated repo)
 git tag -a "$TAG" -m "Release ${NEW_VERSION}"
 
-echo "Pushing commit and tag..."
-git push origin main
+echo "Pushing..."
+jj git push
 git push origin "$TAG"
 
 echo "Done! Release $TAG has been pushed."
