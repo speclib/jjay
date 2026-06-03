@@ -1,11 +1,12 @@
 ---
 # jjay-znb0
 title: add test coverage and integration test Makefile targets
-status: in-progress
+status: completed
+openspec-link: openspec/changes/archive/2026-06-03-add-test-coverage
 type: task
 priority: normal
 created_at: 2026-06-03T11:33:44Z
-updated_at: 2026-06-03T20:00:00Z
+updated_at: 2026-06-03T21:00:00Z
 parent: jjay-qmpg
 ---
 

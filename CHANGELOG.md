@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- **`make coverage` target** — runs unit tests with `-coverprofile`, generates HTML report, prints coverage percentage. See [proposal](openspec/changes/archive/2026-06-03-add-test-coverage/proposal.md).
+- **`make badge` target** — extracts coverage percentage and patches README with a shields.io badge (green ≥80%, yellow ≥60%, red <60%).
+- **README coverage badge** — shields.io badge between hero image and heading.
+
 ## 0.2.0 - 2026-06-03
 
 ### Fixed

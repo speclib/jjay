@@ -1,5 +1,5 @@
 ### Requirement: Makefile with dev targets
-The project SHALL have a Makefile with `build`, `test`, and `lint` targets.
+The project SHALL have a Makefile with `build`, `test`, `lint`, `coverage`, and `badge` targets.
 
 #### Scenario: Build target
 - **WHEN** `make build` is executed
@@ -12,6 +12,16 @@ The project SHALL have a Makefile with `build`, `test`, and `lint` targets.
 #### Scenario: Lint target
 - **WHEN** `make lint` is executed
 - **THEN** `go vet ./...` runs and reports results
+
+#### Scenario: Coverage target
+- **WHEN** `make coverage` is executed
+- **THEN** unit tests run with coverage profiling
+- **THEN** an HTML coverage report is generated
+- **THEN** the total coverage percentage is printed to stdout
+
+#### Scenario: Badge target
+- **WHEN** `make badge` is executed
+- **THEN** the README coverage badge is updated with the current percentage
 
 ### Requirement: Test file convention
 Tests SHALL be placed alongside source files using Go's `*_test.go` convention in the same package. Integration tests SHALL be placed in `test/integration/` with a `//go:build integration` tag.
