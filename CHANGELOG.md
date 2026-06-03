@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- **`jjay merge` silently dropped files** — merge now rebases the workspace onto current main (`jj rebase -b <change>@ -d main`) before creating the merge commit, eliminating jj's 3-way silent file picking that lost task progress, blog posts, and beans. Conflicts are surfaced explicitly and abort the merge. Adds 6 e2e merge scenarios. See [proposal](openspec/changes/archive/2026-06-04-rebase-before-merge/proposal.md) and [ADR-007](openspec/adrs/007-rebase-before-merge.md).
+
 ## 0.2.1 - 2026-06-03
 
 ### Added
