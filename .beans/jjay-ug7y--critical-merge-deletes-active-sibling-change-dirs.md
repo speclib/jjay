@@ -1,11 +1,11 @@
 ---
 # jjay-ug7y
 title: 'CRITICAL: merge deletes active sibling change-dirs created in main after spawn snapshot'
-status: todo
+status: in-progress
 type: bug
 priority: critical
 created_at: 2026-06-04T21:20:38Z
-updated_at: 2026-06-04T21:20:38Z
+updated_at: 2026-06-04T21:30:00Z
 parent: jjay-qmpg
 ---
 
