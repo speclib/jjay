@@ -1,11 +1,11 @@
 ---
 # jjay-7spt
 title: jjay status command
-status: todo
+status: in-progress
 type: feature
 priority: normal
 created_at: 2026-06-03T11:48:11Z
-updated_at: 2026-06-03T14:54:47Z
+updated_at: 2026-06-04T00:00:00Z
 parent: jjay-qltp
 ---
 

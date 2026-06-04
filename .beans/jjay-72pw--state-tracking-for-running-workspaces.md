@@ -1,11 +1,11 @@
 ---
 # jjay-72pw
 title: state tracking for running workspaces
-status: todo
+status: scrapped
 type: task
 priority: normal
 created_at: 2026-06-02T16:14:20Z
-updated_at: 2026-06-03T14:55:19Z
+updated_at: 2026-06-04T00:00:00Z
 parent: jjay-qltp
 ---
 
