@@ -2,10 +2,14 @@ package session
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"jjay/internal/spawn"
+	"jjay/internal/status"
 )
 
 // SessionName returns the tmux session name for a given directory path.
@@ -38,7 +42,48 @@ func Open(path string) error {
 		return err
 	}
 
+	reopenSpawns(sessionName, os.Stdout)
+
 	return nil
+}
+
+// openWindowFunc opens a tmux window + agent for a detached spawn. Matches
+// spawn.OpenWindow; injectable for testing.
+type openWindowFunc func(change, wsDir string, opts spawn.SpawnOptions) error
+
+// reopenSpawns recreates a tmux window for every detached spawn in the given
+// session. It is best-effort and non-fatal (ADR-003 / ADR-006): a per-spawn
+// failure is logged and the rest continue; session-open still succeeds.
+func reopenSpawns(sessionName string, out io.Writer) {
+	spawns, _, err := status.List(sessionName, "")
+	if err != nil {
+		// Can't enumerate workspaces — nothing to reopen, not fatal.
+		fmt.Fprintf(out, "session-open: could not enumerate spawns to reopen: %v\n", err)
+		return
+	}
+	reopenDetached(spawns, sessionName, spawn.OpenWindow, out)
+}
+
+// reopenDetached acts on the detached subset of spawns using open(). Spawns that
+// already have a window (Attached) are skipped — no duplicates. Pure aside from
+// the injected open func, so it is unit-testable.
+func reopenDetached(spawns []status.Spawn, sessionName string, open openWindowFunc, out io.Writer) {
+	var failed []string
+	for _, s := range spawns {
+		if s.Attached {
+			continue // window already exists; do not duplicate
+		}
+		opts := spawn.SpawnOptions{Session: sessionName}
+		if err := open(s.Change, s.WSDir, opts); err != nil {
+			fmt.Fprintf(out, "session-open: could not reopen spawn %q: %v\n", s.Change, err)
+			failed = append(failed, s.Change)
+			continue
+		}
+		fmt.Fprintf(out, "session-open: reopened spawn %q\n", s.Change)
+	}
+	if len(failed) > 0 {
+		fmt.Fprintf(out, "session-open: %d spawn(s) failed to reopen: %s\n", len(failed), strings.Join(failed, ", "))
+	}
 }
 
 func checkJJRepo(absPath string) error {

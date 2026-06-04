@@ -52,10 +52,7 @@ func Spawn(changeName string, opts SpawnOptions) error {
 	if err := createWorkspace(changeName, wsDir); err != nil {
 		return err
 	}
-	if err := createWindow(changeName, opts.Session, wsDir); err != nil {
-		return err
-	}
-	if err := setupPanes(changeName, wsDir, opts); err != nil {
+	if err := OpenWindow(changeName, wsDir, opts); err != nil {
 		return err
 	}
 
@@ -158,6 +155,17 @@ func createWorkspace(changeName, wsDir string) error {
 		return fmt.Errorf("failed to create jj workspace: %w", err)
 	}
 	return nil
+}
+
+// OpenWindow creates the `ws-<change>` tmux window for an existing workspace
+// and launches the agent inside it, producing the same window/pane/agent layout
+// as Spawn. Both Spawn and session-open reopen call this so they cannot diverge.
+// It does not create or check the jj workspace — the caller owns that.
+func OpenWindow(changeName, wsDir string, opts SpawnOptions) error {
+	if err := createWindow(changeName, opts.Session, wsDir); err != nil {
+		return err
+	}
+	return setupPanes(changeName, wsDir, opts)
 }
 
 func createWindow(changeName, session, wsDir string) error {

@@ -89,16 +89,48 @@ go install ./cmd/jjay
 ```
 jjay session-open <path>  Create and switch to a tmux session for a jj repo
 jjay spawn <change>       Create workspace + tmux window + launch agent
+jjay status               List spawned workspaces, task progress, and window state
+jjay merge <change>       Merge workspace into main
 jjay cleanup <change>     Tear down workspace + tmux window + directory
 jjay version              Print version
 ```
 
-Planned:
+### `jjay status`
+
+Lists every spawned jj workspace with its task progress and whether a matching
+`ws-<change>` tmux window exists in the current session:
 
 ```
-jjay status             Show running agents and their state
-jjay merge <change>     Merge workspace into main
+CHANGE     WORKSPACE                       TASKS         ARCHIVED  STATUS
+add-foo    ../myproject-workspaces/add-foo 12/18 (66%)   no        attached
+old-feat   ../myproject-workspaces/old-feat 5/5 (100%)   yes       detached
 ```
+
+- **WORKSPACE** is shown **relative to the main repo root**, and is resolved
+  correctly even when `jjay status` is run from inside a child workspace.
+- **TASKS** is `done/total (percent)`, read from the change's `tasks.md`; `-`
+  means no tasks file was found.
+- **ARCHIVED** is **yes** when the change has been archived. Task counts are
+  then read from `openspec/changes/archive/<date>-<change>/tasks.md` instead of
+  the active `openspec/changes/<change>/tasks.md`, so archived spawns still
+  report their progress.
+- **STATUS** is **attached** when a `ws-<change>` window exists in the current
+  session, otherwise **detached** — the workspace is still open on disk, there
+  is just no live window/agent for it (e.g. after a detach or reboot).
+
+Status is read-only and derives everything live from `jj workspace list` +
+`tmux list-windows`; it persists no state (see
+[ADR-006](openspec/adrs/006-workspace-is-source-of-truth.md)). With no tmux
+server running, every spawn is reported as detached.
+
+### Reopen on `session-open`
+
+The tmux view (windows + agents) is volatile, but jj workspaces are durable.
+After creating and switching to the session, `jjay session-open` recreates a
+`ws-<change>` window and relaunches the agent for every spawned workspace that
+lacks one — restoring the view to match the workspaces on disk. Reopen is
+best-effort: if one spawn fails to reopen, the rest still open and session-open
+still succeeds, reporting which spawns failed.
 
 ## Roadmap
 

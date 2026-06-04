@@ -8,6 +8,30 @@ The `jjay status` command SHALL list every jj workspace in the current repositor
 - **THEN** the output includes a row for `add-foo` and a row for `fix-bar`
 - **THEN** each row shows the change name and its workspace directory
 
+### Requirement: Workspace directories are shown relative to the main repo root
+Each row's workspace directory SHALL be displayed as a path relative to the main jj working copy (the `default` workspace) root, not as an absolute path. The main repo root SHALL be resolved even when `jjay status` is run from inside a child workspace, by following the workspace's `.jj/repo` pointer to the main copy. If a relative path cannot be computed, the absolute path MAY be shown as a fallback.
+
+#### Scenario: Path is relative to main root
+- **WHEN** a spawn's workspace directory is `<main>/../<project>-workspaces/add-foo` and `jjay status` is executed from the main repo root
+- **THEN** the `add-foo` row shows the directory relative to the main repo root (e.g. `../<project>-workspaces/add-foo`), not an absolute path
+
+#### Scenario: Run from inside a child workspace
+- **WHEN** `jjay status` is executed from within a spawned child workspace (whose `.jj/repo` is a pointer to the main copy)
+- **THEN** the main repo root is resolved via the pointer
+- **THEN** every workspace directory is shown relative to that main repo root
+
+### Requirement: Status reports task progress per spawn
+For each spawned workspace, the command SHALL report openspec task progress read from that workspace's `openspec/changes/<change>/tasks.md`, counting completed (`- [x]`) versus total checkboxes, rendered as `done/total (percent%)`. A workspace with no readable `tasks.md` SHALL render a placeholder (e.g. `-`) and SHALL NOT cause an error.
+
+#### Scenario: Task counts are shown
+- **WHEN** workspace `add-foo` has a `tasks.md` with 12 of 18 checkboxes marked done and `jjay status` is executed
+- **THEN** the `add-foo` row shows `12/18 (66%)`
+
+#### Scenario: Missing tasks.md
+- **WHEN** workspace `add-foo` has no `openspec/changes/add-foo/tasks.md` and `jjay status` is executed
+- **THEN** the `add-foo` row shows a placeholder for tasks
+- **THEN** jjay exits zero
+
 #### Scenario: No spawns
 - **WHEN** no spawned jj workspaces exist and `jjay status` is executed
 - **THEN** jjay exits zero

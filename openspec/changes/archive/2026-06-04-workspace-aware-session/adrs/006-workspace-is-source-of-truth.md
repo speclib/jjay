@@ -1,6 +1,6 @@
 # ADR-006: Workspace existence is the single source of truth
 
-**Status**: Proposed
+**Status**: Accepted
 
 ## Context
 

@@ -29,6 +29,8 @@ Existing building blocks to reuse:
 - **Reopen reuses spawn's window+agent setup.** Recreating a window for a detached spawn should produce the same window/pane/agent layout as the original spawn — factor the window-creation + `setupPanes` logic so both spawn and reopen call it, rather than duplicating `tmux new-window`/`send-keys`.
 - **Reopen is best-effort and non-fatal.** A failure to reopen one spawn logs and continues (consistent with ADR-003's no-rollback stance); `session-open` still succeeds.
 - **tmux-absent tolerance.** `status` treats "no tmux server" as "all detached" (mirrors `session.go:checkSessionNotExists`, which treats a tmux error as "no sessions").
+- **Paths anchored on the main repo root.** All workspace-dir resolution and display anchor on the main working copy root, not the current directory, so `jjay status` is correct when run from inside a child workspace. The main root is resolved by walking up to the nearest `.jj` and following its `repo` entry: a directory means "this is the main copy", a file is a pointer to `<main>/.jj/repo` (`workspace.MainRepoRoot`). Workspace directories are rendered relative to that root (`workspace.RelativeToMain`) rather than as absolute paths.
+- **Task progress column.** `status` reads each spawn's `openspec/changes/<change>/tasks.md` and counts `- [x]` vs total checkboxes, rendering `done/total (pct%)`. A missing/unreadable `tasks.md` renders `-` and never errors — consistent with the no-fail, derive-live stance.
 
 ## Risks / Trade-offs
 

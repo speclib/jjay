@@ -10,6 +10,7 @@ import (
 	"jjay/internal/merge"
 	"jjay/internal/session"
 	"jjay/internal/spawn"
+	"jjay/internal/status"
 )
 
 // version is set via ldflags at build time (from VERSION file or git tag).
@@ -67,6 +68,24 @@ var sessionOpenCmd = &cobra.Command{
 }
 
 var (
+	statusSession       string
+	statusWorkspaceRoot string
+)
+var statusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "List spawned workspaces and whether each has a tmux window",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		spawns, mainRoot, err := status.List(statusSession, statusWorkspaceRoot)
+		if err != nil {
+			return err
+		}
+		status.Render(cmd.OutOrStdout(), mainRoot, spawns)
+		return nil
+	},
+}
+
+var (
 	cleanupSession       string
 	cleanupWorkspaceRoot string
 )
@@ -88,6 +107,7 @@ func init() {
 	rootCmd.AddCommand(mergeCmd)
 	rootCmd.AddCommand(cleanupCmd)
 	rootCmd.AddCommand(sessionOpenCmd)
+	rootCmd.AddCommand(statusCmd)
 
 	spawnCmd.Flags().StringVar(&spawnAgent, "agent", "", "agent command template (placeholders: {change}, {wsdir})")
 	spawnCmd.Flags().StringVar(&spawnSession, "session", "", "tmux session to target (default: current)")
@@ -95,6 +115,9 @@ func init() {
 
 	cleanupCmd.Flags().StringVar(&cleanupSession, "session", "", "tmux session to target (default: current)")
 	cleanupCmd.Flags().StringVar(&cleanupWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")
+
+	statusCmd.Flags().StringVar(&statusSession, "session", "", "tmux session to inspect (default: current)")
+	statusCmd.Flags().StringVar(&statusWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")
 }
 
 func main() {
