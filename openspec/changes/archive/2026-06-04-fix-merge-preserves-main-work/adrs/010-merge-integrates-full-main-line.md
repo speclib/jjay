@@ -1,6 +1,6 @@
 # ADR-010: Merge integrates the full main line, not only the `main` bookmark
 
-**Status**: Proposed
+**Status**: Accepted
 
 ## Context
 
@@ -20,8 +20,8 @@ This is distinct from the `rebase-before-merge` fix (ADR for jjay-30gc), which a
 `jjay merge` SHALL treat the **tip of the main working-copy line**, not the `main` bookmark alone, as the integration target:
 
 - Before merging, **detect whether `@` (main working copy) is ahead of the `main` bookmark**. If so, the ahead-of-bookmark commits are part of "main" and MUST be included in the merge.
-- **Include them** by advancing the merge base to the true main tip (advance the bookmark to the committed main head, or rebase/merge against that head rather than the lagging bookmark), so the merge commit's tree is `full-main-line ∪ change@`.
-- If inclusion cannot be done safely (e.g. the main working copy has uncommitted changes that can't be a merge parent), **abort with a clear message and do not move the bookmark** — never silently drop. (Consistent with ADR-003's no-silent-partial-state stance and the rebase-before-merge conflict-abort behavior.)
+- **Include them** by advancing the `main` bookmark to the true main tip (`latest(main..@ & ~empty())`) before the rebase/merge, so the merge commit's tree is `full-main-line ∪ change@`.
+- **No dirty-state abort.** Implementation found jj auto-snapshots the working copy, so uncommitted main edits are captured into `@` and folded in like any committed work — there is no unreachable dirty state requiring an abort (this differs from a git-based design). The existing rebase-conflict abort is preserved for genuine content conflicts.
 
 ## Consequences
 

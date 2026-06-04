@@ -26,7 +26,7 @@ The existing e2e scenario "Workspace adds new files, main adds different files" 
 ## Decisions
 
 - **Target the true main tip, not just the bookmark (ADR-010).** Before the merge commit, detect whether `@` is ahead of the `main` bookmark (e.g. `jj log -r 'main..@'` non-empty, or compare bookmark target to the main-line head). If so, fold that head into the integration target — advance the `main` bookmark to the committed main head first, or use that head as the rebase/merge destination — so the merge tree is `full-main-line ∪ change@`.
-- **Abort, never drop.** If ahead-of-bookmark work can't be safely included (e.g. dirty/uncommitted `@`), fail with a clear message and leave the bookmark untouched. Mirrors the rebase-conflict abort already in `merge.go`.
+- **No abort needed for "dirty" state.** Implementation revealed jj auto-snapshots the working copy: uncommitted main edits become part of `@` before any jj command runs, so they show up as ahead-of-bookmark work and are folded in by the rule above. There is no unreachable dirty state to abort on (unlike git). The rebase-conflict abort already in `merge.go` is preserved for genuine content conflicts.
 - **Investigation task first.** Before coding, reproduce against the real lifecycle (spawn → commit new dir in main `@` → merge) and confirm the exact divergence with `jj op log` / `jj log -r 'main..@'`, so the fix targets the verified mechanism rather than the hypothesis.
 - **Test mirrors the existing one.** Add `TestMerge_MainAddsNewFiles` next to `TestMerge_WorkspaceAddsNewFiles` in `internal/merge/merge_integration_test.go`, but create the main-side file in a commit ahead of the bookmark (do NOT `jj bookmark set main` to it) — that's the distinction the current test misses.
 

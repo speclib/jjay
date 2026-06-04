@@ -1,12 +1,13 @@
 ---
 # jjay-ug7y
 title: 'CRITICAL: merge deletes active sibling change-dirs created in main after spawn snapshot'
-status: in-progress
+status: completed
 type: bug
 priority: critical
 created_at: 2026-06-04T21:20:38Z
-updated_at: 2026-06-04T21:30:00Z
+updated_at: 2026-06-04T21:45:00Z
 parent: jjay-qmpg
+openspec-link: openspec/changes/archive/2026-06-04-fix-merge-preserves-main-work
 ---
 
 Regression / gap in the rebase-before-merge fix (jjay-30gc). That fix preserved files MODIFIED on both sides, but NEW directories created in main AFTER the spawn snapshot are still silently deleted at merge time.

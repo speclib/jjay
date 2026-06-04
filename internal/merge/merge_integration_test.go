@@ -267,3 +267,47 @@ func TestMerge_MultipleWorkspaceCommits(t *testing.T) {
 		}
 	}
 }
+
+// TestMerge_MainAddsNewFiles is the mirror of TestMerge_WorkspaceAddsNewFiles:
+// main creates new work AHEAD of the `main` bookmark (committed in @ but never
+// bookmarked) after the workspace base. Before the ADR-010 fix, merge based the
+// merge commit on the lagging bookmark and silently dropped this work. Both the
+// main-side addition and the workspace work must survive (jjay-ug7y).
+func TestMerge_MainAddsNewFiles(t *testing.T) {
+	dir := testRepo(t)
+	defer os.RemoveAll(dir)
+
+	// Workspace is spawned from the current base and does unrelated work.
+	wsDir := createWorkspace(t, dir, "feat")
+	writeFile(t, wsDir, "ws-file.txt", "workspace content")
+	run(t, wsDir, "jj", "describe", "-m", "ws work")
+
+	// Main commits a NEW directory AHEAD of the bookmark: describe @ but do NOT
+	// `jj bookmark set main` to it, then `jj new` so it becomes a committed
+	// ancestor of @ that the bookmark has not reached.
+	writeFile(t, dir, "openspec/changes/new-thing/proposal.md", "important proposal")
+	run(t, dir, "jj", "describe", "-m", "main: add new-thing proposal")
+	run(t, dir, "jj", "new")
+
+	// Sanity: the new work is genuinely ahead of the bookmark.
+	ahead := run(t, dir, "jj", "log", "-r", "main..@", "--no-graph", "-T", `"x"`)
+	if ahead == "" {
+		t.Fatal("test setup wrong: main work should be ahead of the bookmark")
+	}
+
+	// Merge.
+	if err := mergeInRepo(t, dir, "feat"); err != nil {
+		t.Fatalf("merge failed: %v", err)
+	}
+
+	// Both the ahead-of-bookmark main work AND the workspace work must survive.
+	if !fileExists(t, dir, "openspec/changes/new-thing/proposal.md") {
+		t.Error("main-side new-thing/proposal.md should exist after merge — THIS WAS THE BUG (jjay-ug7y)")
+	}
+	if !fileExists(t, dir, "ws-file.txt") {
+		t.Error("ws-file.txt (workspace work) should exist after merge")
+	}
+	if !fileExists(t, dir, "initial.txt") {
+		t.Error("initial.txt should still exist after merge")
+	}
+}

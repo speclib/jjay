@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Workspace files preserved after merge
-After merge, all files added or modified by the workspace SHALL be present in the merge result, AND all committed work on the main line SHALL be preserved — including commits in the main working copy (`@`) that are **ahead of the `main` bookmark** at merge time. No files SHALL be silently dropped from either side. If ahead-of-bookmark main work cannot be safely included in the merge, `jjay merge` SHALL fail with a clear message and SHALL NOT move the `main` bookmark (no silent loss).
+After merge, all files added or modified by the workspace SHALL be present in the merge result, AND all committed work on the main line SHALL be preserved — including commits in the main working copy (`@`) that are **ahead of the `main` bookmark** at merge time. Because jj auto-snapshots the working copy, uncommitted main-side edits are captured into `@` and are therefore also preserved. No files SHALL be silently dropped from either side.
 
 #### Scenario: Workspace adds new files, main adds different files
 - **WHEN** main adds `bar.txt` and workspace adds `baz.txt`
@@ -21,10 +21,10 @@ After merge, all files added or modified by the workspace SHALL be present in th
 - **THEN** after the merge `openspec/changes/new-thing/` exists on `main`
 - **THEN** the workspace's own work also exists on `main`
 
-#### Scenario: Unsafe-to-include main work aborts non-destructively
-- **WHEN** ahead-of-bookmark main work cannot be folded into the merge (e.g. an uncommitted dirty main working copy)
-- **THEN** `jjay merge` exits non-zero with an explanatory message
-- **THEN** the `main` bookmark is unchanged and no main-side work is lost
+#### Scenario: Uncommitted main edits are snapshotted and preserved
+- **WHEN** the main working copy has uncommitted edits at merge time
+- **THEN** jj snapshots them into `@`, so they are ahead-of-bookmark work and are folded into the merge like any committed main work
+- **THEN** the edits are present on `main` after merge (jj has no unreachable "dirty" state that would require aborting)
 
 ### Requirement: E2E test scenarios for merge
 Integration tests (build tag `integration`) SHALL cover the merge scenarios below, including a scenario for main-side work created after the workspace base (the mirror of the workspace-adds-new-files scenario).
