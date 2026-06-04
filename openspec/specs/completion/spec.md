@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Shell completion for the `jjay` CLI verbs that take a change/workspace name (`spawn`, `merge`, `cleanup`), so that pressing TAB suggests the right names from openspec changes and existing jj workspaces, fast and without side effects.
+
+## Requirements
 
 ### Requirement: Spawn completes un-spawned changes
 Shell completion for the positional argument of `jjay spawn` SHALL suggest the names of openspec changes that do not currently have a spawned jj workspace (the set of all change names minus the set of existing workspace names). Completion SHALL NOT offer file-path fallback for this argument.

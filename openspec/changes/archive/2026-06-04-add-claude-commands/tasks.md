@@ -26,6 +26,6 @@
 
 ## 5. Verify
 
-- [ ] 5.1 In a session with the `jjay` binary on PATH, confirm `/jjay:spawn <change>` creates a workspace + window and launches the agent.
+- [x] 5.1 In a session with the `jjay` binary on PATH, confirm `/jjay:spawn <change>` creates a workspace + window and launches the agent.
 - [x] 5.2 Confirm `/jjay:status`, `/jjay:merge`, `/jjay:cleanup`, `/jjay:session-open` invoke the right binary calls.
 - [x] 5.3 Confirm the commands are present inside a spawned workspace's `.claude/commands/jjay/`.

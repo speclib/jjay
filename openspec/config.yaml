@@ -18,6 +18,8 @@ context: |
   - "cleanup" = forget workspace, remove dir, kill session
 
 rules:
+  proposal:
+    - 'Pre-1.0: do not add backward-compatibility shims, aliases, or deprecation layers. There is one user; prefer a clean break (remove the old form, migrate callers) over carrying two ways to do the same thing.'
   specs:
     - Write requirements as observable CLI behavior and outcomes
     - Specify which external tools (jj, tmux, agent) each command depends on
@@ -25,3 +27,4 @@ rules:
     - Scope tasks to a single command or lifecycle phase
   design:
     - Document subprocess invocations and their expected outputs
+    - 'Pre-1.0: choose the clean break over a back-compat shim/alias; if a change removes or renames something, migrate its callers rather than keeping the old form.'

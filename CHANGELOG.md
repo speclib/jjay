@@ -11,7 +11,7 @@
 - **Claude Code integration layer** — `/jjay:*` commands + `jjay` skill
   - thin wrappers over the binary; skill steers toward `/jjay:spawn` over `/opsx:apply`, documents lifecycle and orchestrator-vs-worker split. See [proposal](openspec/changes/archive/2026-06-04-add-claude-commands/proposal.md), [ADR-007](openspec/changes/archive/2026-06-04-add-claude-commands/adrs/007-commands-thin-skill-policy.md).
 - **Shell completion for change names** — `spawn`/`merge`/`cleanup`, per-verb
-  - `spawn` = changes without a workspace; `merge`/`cleanup` = existing workspaces. Reads `openspec list` + `jj workspace list` only. New `internal/completion`, `internal/openspec`, `status.WorkspaceNames()`. See [proposal](openspec/changes/add-change-completion/proposal.md), [ADR-009](openspec/adrs/009-completion-package-depends-on-data-sources.md).
+  - `spawn` = changes without a workspace; `merge`/`cleanup` = existing workspaces. Reads `openspec list` + `jj workspace list` only. New `internal/completion`, `internal/openspec`, `status.WorkspaceNames()`. See [proposal](openspec/changes/archive/2026-06-05-add-change-completion/proposal.md), [ADR-009](openspec/changes/archive/2026-06-05-add-change-completion/adrs/009-completion-package-depends-on-data-sources.md).
 - **`jjay status`** — lists spawned workspaces, task progress, attached/detached
   - paths relative to the main repo root; read-only, derived from `jj workspace list` + `tmux list-windows`; tolerant of a missing tmux server. See [proposal](openspec/changes/archive/2026-06-04-workspace-aware-session/proposal.md).
 - **Reopen on `session-open`** — recreates `ws-<change>` windows for spawns

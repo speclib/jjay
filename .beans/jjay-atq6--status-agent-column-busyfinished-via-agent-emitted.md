@@ -5,8 +5,8 @@ status: draft
 type: task
 priority: normal
 created_at: 2026-06-04T22:44:00Z
-updated_at: 2026-06-04T22:44:00Z
-parent: jjay-qltp
+updated_at: 2026-06-04T23:55:54Z
+parent: jjay-5y1a
 ---
 
 The "hard half" of jjay-nnjz, split out because it fights ADR-006 (everything derived live from jj+tmux, no state file) and needs real design.

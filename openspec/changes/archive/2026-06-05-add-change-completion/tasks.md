@@ -31,7 +31,7 @@
 - [x] 5.1 README: note that `spawn`/`merge`/`cleanup` change names tab-complete (and that `jjay completion <shell>` installs the script).
 - [x] 5.2 Update CHANGELOG.
 - [x] 5.3 Confirm ADR-009 reflects the implementation; flip to Accepted on archive.
-- [ ] 5.4 Set `jjay-nd10` status to `in-progress`; add `openspec-link` on archive.
+- [x] 5.4 Set `jjay-nd10` status; add `openspec-link` on archive.
 
 ## 6. verify
 

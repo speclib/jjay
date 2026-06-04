@@ -1,6 +1,6 @@
 # ADR-009: Completion depends on data-source packages, not command packages
 
-**Status**: Proposed
+**Status**: Accepted
 
 ## Context
 
