@@ -1,13 +1,13 @@
 package spawn
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"jjay/internal/openspec"
 	"jjay/internal/workspace"
 )
 
@@ -69,27 +69,14 @@ func checkTmuxSession() error {
 	return nil
 }
 
-type openspecChange struct {
-	Name string `json:"name"`
-}
-
-type openspecList struct {
-	Changes []openspecChange `json:"changes"`
-}
-
 func checkOpenspecChange(changeName string) error {
-	out, err := exec.Command("openspec", "list", "--json").Output()
+	names, err := openspec.ChangeNames()
 	if err != nil {
-		return fmt.Errorf("failed to list openspec changes: %w", err)
+		return err
 	}
 
-	var list openspecList
-	if err := json.Unmarshal(out, &list); err != nil {
-		return fmt.Errorf("failed to parse openspec output: %w", err)
-	}
-
-	for _, c := range list.Changes {
-		if c.Name == changeName {
+	for _, name := range names {
+		if name == changeName {
 			return nil
 		}
 	}

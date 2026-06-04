@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"jjay/internal/cleanup"
+	"jjay/internal/completion"
 	"jjay/internal/merge"
 	"jjay/internal/session"
 	"jjay/internal/spawn"
@@ -108,6 +109,12 @@ func init() {
 	rootCmd.AddCommand(cleanupCmd)
 	rootCmd.AddCommand(sessionOpenCmd)
 	rootCmd.AddCommand(statusCmd)
+
+	// Per-verb change-name completion. This is the only place that knows the
+	// verb↔function mapping — the redesign seam (ADR-009).
+	spawnCmd.ValidArgsFunction = completion.Spawnable
+	mergeCmd.ValidArgsFunction = completion.Mergeable
+	cleanupCmd.ValidArgsFunction = completion.Cleanable
 
 	spawnCmd.Flags().StringVar(&spawnAgent, "agent", "", "agent command template (placeholders: {change}, {wsdir})")
 	spawnCmd.Flags().StringVar(&spawnSession, "session", "", "tmux session to target (default: current)")

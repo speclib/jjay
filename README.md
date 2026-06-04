@@ -95,6 +95,24 @@ jjay cleanup <change>     Tear down workspace + tmux window + directory
 jjay version              Print version
 ```
 
+### Shell completion
+
+The change-name argument of `spawn`, `merge`, and `cleanup` tab-completes, each
+filtered to the candidates that verb can actually act on:
+
+- `jjay spawn <TAB>` → openspec changes that do **not** yet have a workspace
+  (you can't spawn an already-spawned change).
+- `jjay merge <TAB>` / `jjay cleanup <TAB>` → existing spawned workspaces (the
+  `default` main working copy is never offered).
+
+Completion is fast and side-effect free — it reads only `openspec list` and
+`jj workspace list` (no tmux, no task files) — and degrades silently to no
+candidates if a source can't be read.
+
+Install the completion script for your shell with `jjay completion <shell>`
+(`bash`, `zsh`, `fish`, or `powershell`); follow the script's own header for
+where to source it.
+
 ### `jjay status`
 
 Lists every spawned jj workspace with its task progress and whether a matching
