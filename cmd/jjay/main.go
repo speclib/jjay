@@ -8,6 +8,7 @@ import (
 
 	"jjay/internal/cleanup"
 	"jjay/internal/completion"
+	jjinit "jjay/internal/init"
 	"jjay/internal/merge"
 	"jjay/internal/session"
 	"jjay/internal/spawn"
@@ -46,6 +47,38 @@ var spawnCmd = &cobra.Command{
 			Agent:         spawnAgent,
 			Session:       spawnSession,
 			WorkspaceRoot: spawnWorkspaceRoot,
+		})
+	},
+}
+
+var (
+	initYes        bool
+	initForce      bool
+	initWithJJ     bool
+	initWithHooks  bool
+	initNoClaude   bool
+	initNoOpenspec bool
+	initNoAgents   bool
+)
+
+var initCmd = &cobra.Command{
+	Use:   "init [path]",
+	Short: "Prepare a project for orchestration by jjay (openspec, Claude integration, AGENTS.md)",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		path := ""
+		if len(args) == 1 {
+			path = args[0]
+		}
+		return jjinit.Init(path, jjinit.InitOptions{
+			Yes:        initYes,
+			Force:      initForce,
+			WithJJ:     initWithJJ,
+			WithHooks:  initWithHooks,
+			NoClaude:   initNoClaude,
+			NoOpenspec: initNoOpenspec,
+			NoAgents:   initNoAgents,
+			Out:        cmd.OutOrStdout(),
 		})
 	},
 }
@@ -104,6 +137,7 @@ var cleanupCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(spawnCmd)
 	rootCmd.AddCommand(mergeCmd)
 	rootCmd.AddCommand(cleanupCmd)
@@ -115,6 +149,14 @@ func init() {
 	spawnCmd.ValidArgsFunction = completion.Spawnable
 	mergeCmd.ValidArgsFunction = completion.Mergeable
 	cleanupCmd.ValidArgsFunction = completion.Cleanable
+
+	initCmd.Flags().BoolVar(&initYes, "yes", false, "accept creation defaults without prompting (does not authorize overwriting existing files)")
+	initCmd.Flags().BoolVar(&initForce, "force", false, "overwrite existing files")
+	initCmd.Flags().BoolVar(&initWithJJ, "with-jj", false, "initialize a jj repo if not already present")
+	initCmd.Flags().BoolVar(&initWithHooks, "with-hooks", false, "scaffold example (commented) hooks")
+	initCmd.Flags().BoolVar(&initNoClaude, "no-claude", false, "skip installing the jjay Claude integration")
+	initCmd.Flags().BoolVar(&initNoOpenspec, "no-openspec", false, "skip the openspec step")
+	initCmd.Flags().BoolVar(&initNoAgents, "no-agents", false, "skip writing AGENTS.md")
 
 	spawnCmd.Flags().StringVar(&spawnAgent, "agent", "", "agent command template (placeholders: {change}, {wsdir})")
 	spawnCmd.Flags().StringVar(&spawnSession, "session", "", "tmux session to target (default: current)")

@@ -87,6 +87,7 @@ go install ./cmd/jjay
 ## CLI
 
 ```
+jjay init [path]          Prepare a project for orchestration by jjay
 jjay session-open <path>  Create and switch to a tmux session for a jj repo
 jjay spawn <change>       Create workspace + tmux window + launch agent
 jjay status               List spawned workspaces, task progress, and window state
@@ -94,6 +95,43 @@ jjay merge <change>       Merge workspace into main
 jjay cleanup <change>     Tear down workspace + tmux window + directory
 jjay version              Print version
 ```
+
+### `jjay init`
+
+Prepares a project (default: the current directory) so jjay can orchestrate it.
+It is **idempotent** and **non-destructive**: safe to re-run, and it never
+overwrites an existing file without `--force`. Steps run in order:
+
+1. **openspec** — runs `openspec init <path> --tools claude` if `openspec/` is
+   absent (delegating to openspec, not reimplementing it), then checks that
+   `openspec/config.yaml` exists.
+2. **Claude integration** — installs the `/jjay:*` slash commands into
+   `<target>/.claude/commands/jjay/` and the `jjay` skill into
+   `<target>/.claude/skills/jjay/`. These are embedded from this repo's own
+   `.claude/`, so an installed copy is byte-identical to the dogfooded one.
+3. **AGENTS.md** — writes an `AGENTS.md` documenting the jjay conventions
+   (openspec archive flow, beans tasks, jj usage).
+4. **jj** *(opt-in, `--with-jj`)* — initializes a jj repo via `jj git init` if
+   none is present.
+5. **hooks** *(opt-in, `--with-hooks`)* — scaffolds a commented example hooks
+   file you can enable.
+
+Each step reports whether its artifact was **created**, **skipped** (already
+present), or left in place (with a hint to pass `--force`).
+
+| Flag | Effect |
+| --- | --- |
+| `--yes` | Accept creation defaults without prompting. Does **not** authorize overwriting existing files. |
+| `--force` | Overwrite existing files (`AGENTS.md`, commands, …). |
+| `--with-jj` | Initialize a jj repo if absent. |
+| `--with-hooks` | Scaffold the example hooks file. |
+| `--no-claude` | Skip installing the jjay Claude integration. |
+| `--no-openspec` | Skip the openspec step. |
+| `--no-agents` | Skip writing `AGENTS.md`. |
+
+`jjay init` installs the jjay Claude integration **per target project** (into
+that project's `.claude/`), not user-wide. Requires the `openspec` binary on
+`PATH`; `--with-jj` additionally requires `jj`.
 
 ### Shell completion
 
