@@ -1,12 +1,12 @@
 ---
 # jjay-nnjz
 title: more status columns (view configurable)
-status: draft
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-06-04T20:24:35Z
-updated_at: 2026-06-04T22:07:55Z
-parent: jjay-hjjg
+updated_at: 2026-06-05T00:00:00Z
+parent: jjay-qltp
 ---
 
 change:

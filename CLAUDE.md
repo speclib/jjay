@@ -44,4 +44,4 @@ Run these steps in order:
    - Re-check `openspec status` to confirm `blog` is now `done` before proceeding.
    - Only `blog` is auto-created. Other incomplete artifacts (e.g. `adr`) remain **warn-only** — surface them as a warning and let the user confirm proceeding, do not auto-create them.
 2. jj describe
-3. the changelog should also be updated
+3. the changelog should also be updated. Each entry headline (the `- **name** — summary` bullet) MUST be <= 80 characters; put detail and `See [proposal]/[ADR]` links on indented sub-bullets below it, not in the headline.
