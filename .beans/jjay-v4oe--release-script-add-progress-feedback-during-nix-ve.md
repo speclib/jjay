@@ -5,8 +5,8 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-06-03T15:53:23Z
-updated_at: 2026-06-03T19:06:31Z
-parent: jjay-qltp
+updated_at: 2026-06-04T14:49:33Z
+parent: jjay-5y1a
 ---
 
 The nix vendorHash update step in scripts/release.sh runs nix build silently while piping to grep. This can take minutes with no feedback. Add status messages like 'Building with fake hash to determine correct vendorHash (this may take a minute)...' and show nix build progress or a spinner.

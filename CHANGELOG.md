@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- **`jjay status`** — lists every spawned jj workspace with task progress (`done/total (pct%)` read from each workspace's `openspec/changes/<change>/tasks.md`) and reports each as **attached** (a `ws-<change>` tmux window exists in the current session) or **detached** (workspace still open, no window). Workspace paths are shown **relative to the main repo root**, resolved correctly even when run from inside a child workspace (via the `.jj/repo` pointer). Read-only; derived live from `jj workspace list` + `tmux list-windows` with no state file, and tolerant of a missing tmux server (all detached). See [proposal](openspec/changes/archive/2026-06-04-workspace-aware-session/proposal.md).
+- **Reopen on `session-open`** — after switching to the session, `jjay session-open` recreates a `ws-<change>` window and relaunches the agent for every spawned workspace that lacks one, restoring the tmux view to match the workspaces on disk. Best-effort: a per-spawn failure is reported and skipped without aborting session-open.
+- **ADR-006** — records the founding invariant that the jj workspace is the single source of truth (a spawn is "open" iff its workspace exists; tmux windows and the agent are recreatable views), so `status` and reopen share one definition.
+
 ### Changed
 
 - **Archive blog gate** — `/opsx:archive` now auto-creates a missing `blog` artifact before archiving (via the "OpenSpec Archive triggers" section in `CLAUDE.md`), instead of only warning. The blog is written retrospectively from `proposal.md` and completed `tasks.md`; other incomplete artifacts (e.g. `adr`) stay warn-only. See [proposal](openspec/changes/archive/2026-06-04-fix-devlog-archive-gate/proposal.md).
