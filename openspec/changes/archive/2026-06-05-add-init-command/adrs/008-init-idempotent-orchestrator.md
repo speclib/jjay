@@ -1,6 +1,6 @@
 # ADR-008: init is an idempotent, non-destructive orchestrator of external initializers
 
-**Status**: Proposed
+**Status**: Accepted
 
 ## Context
 

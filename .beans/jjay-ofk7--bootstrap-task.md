@@ -1,12 +1,13 @@
 ---
 # jjay-ofk7
 title: init task
-status: draft
+status: completed
 type: task
 priority: normal
 created_at: 2026-06-02T13:36:20Z
-updated_at: 2026-06-04T22:08:46Z
+updated_at: 2026-06-05T00:00:00Z
 parent: jjay-qltp
+openspec-link: openspec/changes/archive/2026-06-05-add-init-command/proposal.md
 ---
 
 - init openspec
