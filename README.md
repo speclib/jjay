@@ -132,6 +132,32 @@ lacks one — restoring the view to match the workspaces on disk. Reopen is
 best-effort: if one spawn fails to reopen, the rest still open and session-open
 still succeeds, reporting which spawns failed.
 
+## Claude Code integration
+
+jjay ships a Claude Code integration layer under `.claude/` so agents (and you) drive the tool the way it was designed — spawning isolated workspaces rather than applying changes in place. Because `.claude/` is committed and spawned workspaces are jj copies of the repo, these propagate into every spawned workspace automatically.
+
+### `/jjay:*` slash commands
+
+Thin wrappers over the `jjay` binary — one per CLI verb:
+
+| Command | Runs |
+| --- | --- |
+| `/jjay:spawn <change>` | `jjay spawn <change>` — workspace + tmux window + agent |
+| `/jjay:status` | `jjay status` |
+| `/jjay:merge <change>` | `jjay merge <change>` |
+| `/jjay:cleanup <change>` | `jjay cleanup <change>` |
+| `/jjay:session-open <path>` | `jjay session-open <path>` |
+
+They reimplement no logic — the binary is the only source of behavior. Commands for change-name verbs prompt for the change (listing candidates via `openspec list --json` / `jjay status`) if you omit it.
+
+### `jjay` orchestrator skill
+
+`.claude/skills/jjay/SKILL.md` auto-loads when the conversation is about implementing or managing a change in this repo, and encodes the policy: **implement a change by spawning an isolated agent workspace (`/jjay:spawn`), not by running `/opsx:apply` in the main session.** It documents the lifecycle (explore → propose → spawn → status → merge → cleanup) and the **orchestrator-vs-worker** distinction — including the rule that a worker (an agent already running inside a spawned workspace) applies in place and must not recursively spawn.
+
+### Precondition
+
+The `/jjay:*` commands shell out to the `jjay` binary, so **`jjay` must be on `PATH`** in the session (true in spawned workspaces too, since they run in the same environment). See [Installation](#installation).
+
 ## Roadmap
 
 - Core lifecycle commands (spawn, merge, cleanup)
