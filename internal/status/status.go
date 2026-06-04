@@ -70,6 +70,19 @@ func List(session, workspaceRoot string) (spawns []Spawn, mainRoot string, err e
 	return spawns, mainRoot, err
 }
 
+// WorkspaceNames returns the names of spawned jj workspaces (the `default` main
+// working copy excluded). It is a lean reader for shell completion: it runs only
+// `jj workspace list` — no tmux probing, no tasks.md reads — and shares the
+// parse/exclusion rule with List via parseWorkspaceNames. Returns an error if jj
+// cannot be run; completion callers should treat that as "no candidates".
+func WorkspaceNames() ([]string, error) {
+	out, err := exec.Command("jj", "workspace", "list").Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list jj workspaces: %w", err)
+	}
+	return parseWorkspaceNames(string(out)), nil
+}
+
 // listWindows returns the set of tmux window names in the target session.
 // A missing tmux server (or any tmux error) is treated as "no windows",
 // mirroring session.checkSessionNotExists — every spawn is then detached.

@@ -2,6 +2,7 @@ package status
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -119,6 +120,32 @@ func TestParseWorkspaceNames_IgnoresJunk(t *testing.T) {
 	names := parseWorkspaceNames(out)
 	if len(names) != 1 || names[0] != "add-foo" {
 		t.Errorf("parseWorkspaceNames = %v, want [add-foo]", names)
+	}
+}
+
+// WorkspaceNames shares parseWorkspaceNames with List, so the default-exclusion
+// rule is covered here against the same sample List uses.
+func TestParseWorkspaceNames_ExcludesDefault(t *testing.T) {
+	names := parseWorkspaceNames(sampleWSList)
+	if len(names) != 2 || names[0] != "add-foo" || names[1] != "fix-bar" {
+		t.Errorf("parseWorkspaceNames = %v, want [add-foo fix-bar] (default excluded)", names)
+	}
+	for _, n := range names {
+		if n == defaultWorkspaceName {
+			t.Errorf("default workspace must be excluded, got %v", names)
+		}
+	}
+}
+
+// TestWorkspaceNames_ToleratesMissingJJ verifies WorkspaceNames returns an error
+// (not a panic) when jj cannot be run. Only the error path is deterministic
+// without a real jj repo.
+func TestWorkspaceNames_ToleratesMissingJJ(t *testing.T) {
+	if _, err := exec.LookPath("jj"); err == nil {
+		t.Skip("jj binary present; cannot test the missing-binary path")
+	}
+	if _, err := WorkspaceNames(); err == nil {
+		t.Error("expected error when jj is unavailable, got nil")
 	}
 }
 
