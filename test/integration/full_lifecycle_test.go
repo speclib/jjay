@@ -4,9 +4,11 @@ package integration
 
 import (
 	"os/exec"
+	"strings"
 	"testing"
 
 	"jjay/internal/cleanup"
+	"jjay/internal/status"
 )
 
 // TestFullLifecycle tests spawn → verify → cleanup → verify as subtests
@@ -16,6 +18,10 @@ func TestFullLifecycle(t *testing.T) {
 
 	t.Run("spawn", func(t *testing.T) {
 		assertSpawn(t, env)
+	})
+
+	t.Run("status", func(t *testing.T) {
+		assertStatus(t, env)
 	})
 
 	t.Run("cleanup", func(t *testing.T) {
@@ -44,6 +50,48 @@ func TestSpawn(t *testing.T) {
 	t.Logf("To clean up manually:")
 	t.Logf("  tmux kill-session -t %s", env.SessionName)
 	t.Logf("  rm -rf %s", env.TmpDir)
+}
+
+// assertStatus runs status.List + Render against the live spawned environment
+// and verifies the spawn shows up, the table carries the TMUX and MERGED
+// columns, and the freshly-spawned (unmerged) workspace reports MERGED=no.
+func assertStatus(t *testing.T, env *testEnv) {
+	t.Helper()
+
+	spawns, mainRoot, err := status.List(env.SessionName, env.WsRoot)
+	if err != nil {
+		t.Fatalf("status.List() failed: %v", err)
+	}
+
+	var found *status.Spawn
+	for i := range spawns {
+		if spawns[i].Change == env.ChangeName {
+			found = &spawns[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("spawn %q not found in status output: %+v", env.ChangeName, spawns)
+	}
+
+	// A freshly spawned workspace has its own commit ahead of main: not merged.
+	if found.Merged {
+		t.Errorf("fresh spawn %q should report MERGED=no, got Merged=true", env.ChangeName)
+	}
+
+	var b strings.Builder
+	status.Render(&b, mainRoot, spawns)
+	out := b.String()
+
+	header := strings.SplitN(out, "\n", 2)[0]
+	for _, col := range []string{"TMUX", "MERGED"} {
+		if !strings.Contains(header, col) {
+			t.Errorf("status header missing %q column: %q", col, header)
+		}
+	}
+	if !strings.Contains(out, env.ChangeName) {
+		t.Errorf("status output missing spawn %q:\n%s", env.ChangeName, out)
+	}
 }
 
 // assertCleanedUp verifies all resources were removed.

@@ -21,6 +21,8 @@
 
 ### Changed
 
+- **`jjay status` gains a `MERGED` column; `STATUS` renamed to `TMUX`**
+  - **MERGED** (yes/no) flags whether a spawn's work is already on `main`, derived live from jj (`main..<change>@` empty ⇒ merged); a merged-but-not-archived spawn is the "ready to clean up" signal. The tmux-state column is now **TMUX**, freeing "status" for a future agent-state column. New column order `CHANGE WORKSPACE TASKS TMUX MERGED ARCHIVED`; folds `jjay status` into the lifecycle integration test. See [proposal](openspec/changes/add-status-merged-column/proposal.md).
 - **Archive blog gate** — `/opsx:archive` auto-creates a missing `blog` artifact
   - written retrospectively; other incomplete artifacts (e.g. `adr`) stay warn-only. See [proposal](openspec/changes/archive/2026-06-04-fix-devlog-archive-gate/proposal.md).
 
