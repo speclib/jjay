@@ -1,6 +1,6 @@
 # ADR-007: Slash commands are thin binary wrappers; the skill carries policy
 
-**Status**: Proposed
+**Status**: Accepted
 
 ## Context
 
