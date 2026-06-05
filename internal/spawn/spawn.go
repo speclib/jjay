@@ -11,15 +11,99 @@ import (
 	"jjay/internal/workspace"
 )
 
+// Name prefixes encode the spawn kind in the workspace/window name so `status`
+// (and a human reading `jj workspace list`) can tell apply spawns from proposal
+// spawns at a glance. See ADR-011.
+const (
+	ApplyPrefix    = "app-"
+	ProposalPrefix = "prop-"
+)
+
 // SpawnOptions holds configurable parameters for Spawn.
 type SpawnOptions struct {
-	Agent         string // agent command template (with {change} and {wsdir} placeholders)
+	Agent         string // agent command template (with {change}/{prompt} and {wsdir} placeholders)
 	Session       string // tmux session name (empty = current)
 	WorkspaceRoot string // override workspace root (empty = default)
 }
 
-// Spawn creates a jj workspace, tmux window, and launches an agent for the given change.
+// Spawn creates a jj workspace, tmux window, and launches an agent for an
+// existing openspec change. The workspace/window is named `app-<change>`.
+//
+// This is the apply flow: it validates the change exists, then isolates it and
+// launches `/opsx:apply`. The seed is the change name (substituted into
+// {change} in the agent template).
 func Spawn(changeName string, opts SpawnOptions) error {
+	if err := checkOpenspecChange(changeName); err != nil {
+		return err
+	}
+	name := ApplyPrefix + changeName
+	agentTemplate := opts.Agent
+	if agentTemplate == "" {
+		agentTemplate = DefaultAgentCommand
+	}
+	if err := isolateAndLaunch(name, changeName, agentTemplate, opts); err != nil {
+		return err
+	}
+
+	fmt.Printf("Spawned workspace for change %q in %s\n", changeName, name)
+	fmt.Println("Main workspace is now on a fresh change. Your previous work is in @-.")
+	return nil
+}
+
+// Mode selects the seed command a proposal spawn launches.
+type Mode string
+
+const (
+	ModeExplore Mode = "explore"
+	ModePropose Mode = "propose"
+)
+
+// DefaultMode is the configurable default for `spawn proposal`. Explore is the
+// earliest mode of a proposal (ADR-011), so a bare `spawn proposal` starts there.
+const DefaultMode = ModeExplore
+
+// SpawnProposal creates a jj workspace, tmux window, and launches an agent
+// seeded from a free-text prompt to create new work. There is no openspec
+// change at spawn time — the agent invents one inside the isolated workspace.
+//
+// The identity is a code-derived slug from the prompt (no AI), prefixed
+// `prop-`, made unique against existing workspaces/windows. The slug is the
+// immutable handle and display name; it is never remapped after the agent names
+// its change (ADR-011).
+func SpawnProposal(prompt string, mode Mode, opts SpawnOptions) error {
+	if strings.TrimSpace(prompt) == "" {
+		return fmt.Errorf("proposal prompt must not be empty")
+	}
+
+	slug := workspace.Slug(prompt)
+	taken, err := takenSlugs(opts.Session)
+	if err != nil {
+		return err
+	}
+	slug = workspace.UniqueSlug(slug, taken)
+	name := ProposalPrefix + slug
+
+	agentTemplate := opts.Agent
+	if agentTemplate == "" {
+		agentTemplate = proposalAgentCommand(mode)
+	}
+	// The seed substituted into the agent template is the prompt itself.
+	if err := isolateAndLaunch(name, prompt, agentTemplate, opts); err != nil {
+		return err
+	}
+
+	fmt.Printf("Spawned proposal %q (mode %s) in %s\n", slug, mode, name)
+	fmt.Println("Main workspace is now on a fresh change. Your previous work is in @-.")
+	return nil
+}
+
+// isolateAndLaunch is the shared tail of both spawn flows: it runs the tmux/jj
+// precondition checks, snapshots the main workspace, creates the jj workspace,
+// opens the tmux window, and launches the agent. `name` is the already-prefixed
+// workspace/window name; `seed` is substituted into the agent template's
+// {change}/{prompt} placeholder. The flows differ only in how `name` and the
+// agent template are derived (validate-vs-slug + apply-vs-proposal template).
+func isolateAndLaunch(name, seed, agentTemplate string, opts SpawnOptions) error {
 	// Only check TMUX env when not targeting a specific session.
 	// When --session is set, we target that session directly.
 	if opts.Session == "" {
@@ -27,17 +111,14 @@ func Spawn(changeName string, opts SpawnOptions) error {
 			return err
 		}
 	}
-	if err := checkOpenspecChange(changeName); err != nil {
+	if err := checkWorkspaceNotExists(name); err != nil {
 		return err
 	}
-	if err := checkWorkspaceNotExists(changeName); err != nil {
-		return err
-	}
-	if err := checkWindowNotExists(changeName, opts.Session); err != nil {
+	if err := checkWindowNotExists(name, opts.Session); err != nil {
 		return err
 	}
 
-	wsDir, err := workspace.WorkspaceDir(changeName, opts.WorkspaceRoot)
+	wsDir, err := workspace.WorkspaceDir(name, opts.WorkspaceRoot)
 	if err != nil {
 		return err
 	}
@@ -49,16 +130,10 @@ func Spawn(changeName string, opts SpawnOptions) error {
 		return err
 	}
 
-	if err := createWorkspace(changeName, wsDir); err != nil {
+	if err := createWorkspace(name, wsDir); err != nil {
 		return err
 	}
-	if err := OpenWindow(changeName, wsDir, opts); err != nil {
-		return err
-	}
-
-	fmt.Printf("Spawned workspace for change %q in %s\n", changeName, wsDir)
-	fmt.Println("Main workspace is now on a fresh change. Your previous work is in @-.")
-	return nil
+	return openWindow(name, seed, wsDir, agentTemplate, opts)
 }
 
 // CheckTmuxSession verifies we're running inside a tmux session.
@@ -93,7 +168,7 @@ func snapshotMainWorkspace() error {
 	return nil
 }
 
-func checkWorkspaceNotExists(changeName string) error {
+func checkWorkspaceNotExists(name string) error {
 	out, err := exec.Command("jj", "workspace", "list").Output()
 	if err != nil {
 		return fmt.Errorf("failed to list jj workspaces: %w", err)
@@ -101,15 +176,15 @@ func checkWorkspaceNotExists(changeName string) error {
 
 	for _, line := range strings.Split(string(out), "\n") {
 		fields := strings.Fields(line)
-		if len(fields) > 0 && fields[0] == changeName+":" {
-			return fmt.Errorf("jj workspace %q already exists", changeName)
+		if len(fields) > 0 && fields[0] == name+":" {
+			return fmt.Errorf("jj workspace %q already exists", name)
 		}
 	}
 	return nil
 }
 
-func checkWindowNotExists(changeName, session string) error {
-	wn := workspace.WindowName(changeName)
+func checkWindowNotExists(name, session string) error {
+	wn := workspace.WindowName(name)
 	args := []string{"list-windows", "-F", "#{window_name}"}
 	if session != "" {
 		args = append(args, "-t", session)
@@ -127,7 +202,46 @@ func checkWindowNotExists(changeName, session string) error {
 	return nil
 }
 
-func createWorkspace(changeName, wsDir string) error {
+// takenSlugs returns the set of bare slugs already in use by existing proposal
+// spawns (workspaces or tmux windows carrying the `prop-` prefix), so a new
+// slug can be made unique against them. A missing tmux server contributes no
+// window names (every proposal is then known only via its workspace).
+func takenSlugs(session string) (map[string]bool, error) {
+	taken := map[string]bool{}
+
+	out, err := exec.Command("jj", "workspace", "list").Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list jj workspaces: %w", err)
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		ws := strings.TrimSuffix(fields[0], ":")
+		if s, ok := strings.CutPrefix(ws, ProposalPrefix); ok {
+			taken[s] = true
+		}
+	}
+
+	args := []string{"list-windows", "-F", "#{window_name}"}
+	if session != "" {
+		args = append(args, "-t", session)
+	}
+	if wout, werr := exec.Command("tmux", args...).Output(); werr == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(wout)), "\n") {
+			// Window names are ws-<name>; strip ws- then the prop- prefix.
+			wn := strings.TrimPrefix(strings.TrimSpace(line), "ws-")
+			if s, ok := strings.CutPrefix(wn, ProposalPrefix); ok {
+				taken[s] = true
+			}
+		}
+	}
+
+	return taken, nil
+}
+
+func createWorkspace(name, wsDir string) error {
 	if err := os.MkdirAll(filepath.Dir(wsDir), 0o755); err != nil {
 		return fmt.Errorf("failed to create workspace parent directory: %w", err)
 	}
@@ -135,7 +249,7 @@ func createWorkspace(changeName, wsDir string) error {
 	// (e.g., the active openspec change directory)
 	// Use @- to get the snapshot created by jj new (contains all files).
 	// Using @ would create a child of the empty new change.
-	cmd := exec.Command("jj", "workspace", "add", "--name", changeName, "--revision", "@-", wsDir)
+	cmd := exec.Command("jj", "workspace", "add", "--name", name, "--revision", "@-", wsDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -144,19 +258,38 @@ func createWorkspace(changeName, wsDir string) error {
 	return nil
 }
 
-// OpenWindow creates the `ws-<change>` tmux window for an existing workspace
-// and launches the agent inside it, producing the same window/pane/agent layout
-// as Spawn. Both Spawn and session-open reopen call this so they cannot diverge.
+// OpenWindow creates the `ws-<name>` tmux window for an existing apply-spawn
+// workspace and launches the apply agent inside it. It is the reopen entry
+// point used by session-open, which only knows the workspace name (the seed for
+// the apply template is that same name). Both Spawn and session-open route
+// through openWindow so they cannot diverge.
+//
 // It does not create or check the jj workspace — the caller owns that.
-func OpenWindow(changeName, wsDir string, opts SpawnOptions) error {
-	if err := createWindow(changeName, opts.Session, wsDir); err != nil {
-		return err
+func OpenWindow(name, wsDir string, opts SpawnOptions) error {
+	agentTemplate := opts.Agent
+	if agentTemplate == "" {
+		agentTemplate = DefaultAgentCommand
 	}
-	return setupPanes(changeName, wsDir, opts)
+	// session-open reopens by workspace name; the apply template's {change}
+	// placeholder is the change embedded in the `app-` name. For proposal
+	// spawns the seed prompt is gone, but the window/pane layout still reopens;
+	// the agent template falls back to the name as the seed.
+	seed := strings.TrimPrefix(name, ApplyPrefix)
+	return openWindow(name, seed, wsDir, agentTemplate, opts)
 }
 
-func createWindow(changeName, session, wsDir string) error {
-	wn := workspace.WindowName(changeName)
+// openWindow creates the tmux window and sets up the panes/agent. `name` is the
+// prefixed workspace/window name; `seed` is the value substituted into the
+// agent template's {change}/{prompt} placeholder.
+func openWindow(name, seed, wsDir, agentTemplate string, opts SpawnOptions) error {
+	if err := createWindow(name, opts.Session, wsDir); err != nil {
+		return err
+	}
+	return setupPanes(name, seed, wsDir, agentTemplate, opts)
+}
+
+func createWindow(name, session, wsDir string) error {
+	wn := workspace.WindowName(name)
 	args := []string{"new-window", "-d", "-n", wn, "-c", wsDir}
 	if session != "" {
 		args = append(args, "-t", session+":")
@@ -168,12 +301,31 @@ func createWindow(changeName, session, wsDir string) error {
 	return nil
 }
 
-// DefaultAgentCommand is the default agent command template.
+// DefaultAgentCommand is the default apply-flow agent command template.
 const DefaultAgentCommand = `claude "/opsx:apply {change}" --dangerously-skip-permissions --add-dir {wsdir}`
 
-// resolveAgentCommand substitutes {change} and {wsdir} placeholders in the agent command.
-func resolveAgentCommand(template, changeName, wsDir string) string {
-	r := strings.NewReplacer("{change}", changeName, "{wsdir}", wsDir)
+// proposalExploreCommand / proposalProposeCommand are the proposal-flow agent
+// templates. The {prompt} placeholder is the free-text seed; {wsdir} points the
+// agent at the isolated workspace so it writes openspec/changes/<ai-name>/
+// inside its own workspace, never racing the main working copy.
+const (
+	proposalExploreCommand = `claude "/opsx:explore {prompt}" --dangerously-skip-permissions --add-dir {wsdir}`
+	proposalProposeCommand = `claude "/opsx:propose {prompt}" --dangerously-skip-permissions --add-dir {wsdir}`
+)
+
+// proposalAgentCommand returns the agent template for the given proposal mode.
+func proposalAgentCommand(mode Mode) string {
+	if mode == ModePropose {
+		return proposalProposeCommand
+	}
+	return proposalExploreCommand
+}
+
+// resolveAgentCommand substitutes {change}/{prompt} and {wsdir} placeholders in
+// the agent command. The seed fills both {change} and {prompt} so a single
+// template family covers both flows.
+func resolveAgentCommand(template, seed, wsDir string) string {
+	r := strings.NewReplacer("{change}", seed, "{prompt}", seed, "{wsdir}", wsDir)
 	return r.Replace(template)
 }
 
@@ -184,16 +336,11 @@ func tmuxTarget(session, window string) string {
 	return window
 }
 
-func setupPanes(changeName, wsDir string, opts SpawnOptions) error {
-	wn := workspace.WindowName(changeName)
+func setupPanes(name, seed, wsDir, agentTemplate string, opts SpawnOptions) error {
+	wn := workspace.WindowName(name)
 	target := tmuxTarget(opts.Session, wn)
 
-	// Resolve agent command
-	agentTemplate := opts.Agent
-	if agentTemplate == "" {
-		agentTemplate = DefaultAgentCommand
-	}
-	agentCmd := resolveAgentCommand(agentTemplate, changeName, wsDir)
+	agentCmd := resolveAgentCommand(agentTemplate, seed, wsDir)
 
 	// Left pane: launch agent (window already starts in wsDir via -c flag)
 	cmd := exec.Command("tmux", "send-keys", "-t", target, agentCmd, "Enter")

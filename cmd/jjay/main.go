@@ -36,14 +36,45 @@ var (
 	spawnAgent         string
 	spawnSession       string
 	spawnWorkspaceRoot string
+	proposalMode       string
 )
 
+// spawnCmd is the parent of the apply/proposal verbs. It has no bare-argument
+// form (ADR-011): invoking `jjay spawn` without a verb prints usage and exits
+// non-zero. RunE returns an error so the exit code is non-zero.
 var spawnCmd = &cobra.Command{
-	Use:   "spawn <change-name>",
-	Short: "Create workspace + tmux window + launch agent",
+	Use:   "spawn <verb>",
+	Short: "Spawn an agent workspace (apply an existing change, or seed a new proposal)",
+	Args:  cobra.ArbitraryArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		_ = cmd.Usage()
+		return fmt.Errorf("spawn requires a verb: 'apply' or 'proposal'")
+	},
+}
+
+var spawnApplyCmd = &cobra.Command{
+	Use:   "apply <change-name>",
+	Short: "Isolate an existing openspec change and run /opsx:apply (workspace app-<change>)",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return spawn.Spawn(args[0], spawn.SpawnOptions{
+			Agent:         spawnAgent,
+			Session:       spawnSession,
+			WorkspaceRoot: spawnWorkspaceRoot,
+		})
+	},
+}
+
+var spawnProposalCmd = &cobra.Command{
+	Use:   "proposal <prompt>",
+	Short: "Seed a new proposal spawn from a free-text prompt (workspace prop-<slug>)",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		mode := spawn.Mode(proposalMode)
+		if mode != spawn.ModeExplore && mode != spawn.ModePropose {
+			return fmt.Errorf("invalid --mode %q: must be 'explore' or 'propose'", proposalMode)
+		}
+		return spawn.SpawnProposal(args[0], mode, spawn.SpawnOptions{
 			Agent:         spawnAgent,
 			Session:       spawnSession,
 			WorkspaceRoot: spawnWorkspaceRoot,
@@ -139,14 +170,23 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(spawnCmd)
+	spawnCmd.AddCommand(spawnApplyCmd)
+	spawnCmd.AddCommand(spawnProposalCmd)
 	rootCmd.AddCommand(mergeCmd)
 	rootCmd.AddCommand(cleanupCmd)
 	rootCmd.AddCommand(sessionOpenCmd)
 	rootCmd.AddCommand(statusCmd)
 
 	// Per-verb change-name completion. This is the only place that knows the
-	// verb↔function mapping — the redesign seam (ADR-009).
-	spawnCmd.ValidArgsFunction = completion.Spawnable
+	// verb↔function mapping — the redesign seam (ADR-009). The change-name
+	// completion attaches to `spawn apply`'s argument; `spawn proposal` takes a
+	// free-text prompt and offers no candidates (cobra default).
+	spawnApplyCmd.ValidArgsFunction = completion.Spawnable
+	// `spawn proposal` takes a free-text prompt: offer no candidates and suppress
+	// file-name fallback (a prompt is not a path).
+	spawnProposalCmd.ValidArgsFunction = func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
 	mergeCmd.ValidArgsFunction = completion.Mergeable
 	cleanupCmd.ValidArgsFunction = completion.Cleanable
 
@@ -158,9 +198,13 @@ func init() {
 	initCmd.Flags().BoolVar(&initNoOpenspec, "no-openspec", false, "skip the openspec step")
 	initCmd.Flags().BoolVar(&initNoAgents, "no-agents", false, "skip writing AGENTS.md")
 
-	spawnCmd.Flags().StringVar(&spawnAgent, "agent", "", "agent command template (placeholders: {change}, {wsdir})")
-	spawnCmd.Flags().StringVar(&spawnSession, "session", "", "tmux session to target (default: current)")
-	spawnCmd.Flags().StringVar(&spawnWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")
+	// Shared spawn flags live on both verb subcommands.
+	for _, c := range []*cobra.Command{spawnApplyCmd, spawnProposalCmd} {
+		c.Flags().StringVar(&spawnAgent, "agent", "", "agent command template (placeholders: {change}/{prompt}, {wsdir})")
+		c.Flags().StringVar(&spawnSession, "session", "", "tmux session to target (default: current)")
+		c.Flags().StringVar(&spawnWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")
+	}
+	spawnProposalCmd.Flags().StringVar(&proposalMode, "mode", string(spawn.DefaultMode), "seed mode: 'explore' or 'propose'")
 
 	cleanupCmd.Flags().StringVar(&cleanupSession, "session", "", "tmux session to target (default: current)")
 	cleanupCmd.Flags().StringVar(&cleanupWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")

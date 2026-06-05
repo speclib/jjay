@@ -87,14 +87,33 @@ go install ./cmd/jjay
 ## CLI
 
 ```
-jjay init [path]          Prepare a project for orchestration by jjay
-jjay session-open <path>  Create and switch to a tmux session for a jj repo
-jjay spawn <change>       Create workspace + tmux window + launch agent
-jjay status               List spawned workspaces, task progress, and window state
-jjay merge <change>       Merge workspace into main
-jjay cleanup <change>     Tear down workspace + tmux window + directory
-jjay version              Print version
+jjay init [path]              Prepare a project for orchestration by jjay
+jjay session-open <path>      Create and switch to a tmux session for a jj repo
+jjay spawn apply <change>     Isolate an existing change + launch /opsx:apply (app-<change>)
+jjay spawn proposal <prompt>  Seed a new proposal spawn from a prompt (prop-<slug>)
+jjay status                   List spawned workspaces, task progress, and window state
+jjay merge <name>             Merge a spawned workspace into main
+jjay cleanup <name>           Tear down workspace + tmux window + directory
+jjay version                  Print version
 ```
+
+### `jjay spawn`
+
+`spawn` takes a **verb**; there is no bare `jjay spawn <change>` form (running
+`spawn` with no verb prints usage and exits non-zero):
+
+- **`jjay spawn apply <change>`** — isolate an existing openspec change and run
+  `/opsx:apply` inside it. Workspace/window named **`app-<change>`**.
+- **`jjay spawn proposal <prompt> [--mode explore|propose]`** — seed a *new*
+  proposal from free text, so the orchestrator can keep working while
+  exploration/proposal happens in its own window. No openspec change is required
+  at spawn time; the agent creates one. `--mode` selects the seed command
+  (`/opsx:explore` or `/opsx:propose`, default `explore`).
+  - The identity is a **code-derived slug** of the prompt (no AI): lowercase,
+    drop punctuation/stopwords, keep salient tokens, cap length, add a uniqueness
+    suffix on collision. Workspace/window named **`prop-<slug>`**. The slug is the
+    immutable handle — it is **not** renamed after the agent names its change, so
+    a `prop-<slug>` workspace may contain a differently-named change directory.
 
 ### `jjay init`
 
@@ -135,11 +154,14 @@ that project's `.claude/`), not user-wide. Requires the `openspec` binary on
 
 ### Shell completion
 
-The change-name argument of `spawn`, `merge`, and `cleanup` tab-completes, each
-filtered to the candidates that verb can actually act on:
+The arguments of `spawn`, `merge`, and `cleanup` tab-complete, each filtered to
+the candidates that verb can actually act on:
 
-- `jjay spawn <TAB>` → openspec changes that do **not** yet have a workspace
-  (you can't spawn an already-spawned change).
+- `jjay spawn <TAB>` → the verbs `apply` and `proposal`.
+- `jjay spawn apply <TAB>` → openspec changes that do **not** yet have a
+  workspace (you can't spawn an already-spawned change).
+- `jjay spawn proposal <TAB>` → nothing (it takes a free-text prompt, not a
+  candidate name; file-name completion is suppressed).
 - `jjay merge <TAB>` / `jjay cleanup <TAB>` → existing spawned workspaces (the
   `default` main working copy is never offered).
 
@@ -154,13 +176,24 @@ where to source it.
 ### `jjay status`
 
 Lists every spawned jj workspace with its task progress and whether a matching
-`ws-<change>` tmux window exists in the current session:
+`ws-<name>` tmux window exists in the current session. Spawns are split by kind
+(from the name prefix): **CHANGES** (`app-*`, tracking an openspec change) and
+**PROPOSAL SPAWNS** (`prop-*`, prompt-seeded with no change yet). A table with
+no rows is omitted.
 
 ```
-CHANGE     WORKSPACE                       TASKS         TMUX      MERGED  ARCHIVED
-add-foo    ../myproject-workspaces/add-foo 12/18 (66%)   attached  no      no
-old-feat   ../myproject-workspaces/old-feat 5/5 (100%)   detached  yes     yes
+CHANGES
+CHANGE     WORKSPACE                            TASKS         TMUX      MERGED  ARCHIVED
+add-foo    ../myproject-workspaces/app-add-foo  12/18 (66%)   attached  no      no
+old-feat   ../myproject-workspaces/app-old-feat 5/5 (100%)    detached  yes     yes
+
+PROPOSAL SPAWNS
+PROPOSAL    WORKSPACE                               MERGED  TMUX
+dark-mode   ../myproject-workspaces/prop-dark-mode  no      attached
 ```
+
+Proposal spawns omit the change-shaped columns (TASKS/ARCHIVED), which are
+meaningless before the agent creates a change.
 
 - **WORKSPACE** is shown **relative to the main repo root**, and is resolved
   correctly even when `jjay status` is run from inside a child workspace.

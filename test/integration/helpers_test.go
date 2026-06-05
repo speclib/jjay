@@ -18,7 +18,8 @@ import (
 
 // testEnv holds all shared state for an integration test run.
 type testEnv struct {
-	ChangeName  string
+	ChangeName  string // openspec change name (no prefix)
+	WSName      string // jj workspace name (verb-prefixed, e.g. app-test-change)
 	SessionName string
 	ProjectDir  string
 	WsRoot      string
@@ -28,7 +29,7 @@ type testEnv struct {
 }
 
 func (e *testEnv) WindowName() string {
-	return workspace.WindowName(e.ChangeName)
+	return workspace.WindowName(e.WSName)
 }
 
 // setupTestEnv creates a temp jj repo, openspec change, and tmux session.
@@ -43,6 +44,7 @@ func setupTestEnv(t *testing.T, keepAlive bool) *testEnv {
 	requireCmd(t, "openspec")
 
 	changeName := "test-change"
+	wsName := spawn.ApplyPrefix + changeName
 	sessionName := fmt.Sprintf("jjay-test-%d", rand.Intn(100000))
 
 	var tmpDir string
@@ -58,7 +60,7 @@ func setupTestEnv(t *testing.T, keepAlive bool) *testEnv {
 
 	projectDir := filepath.Join(tmpDir, "testproject")
 	wsRoot := filepath.Join(tmpDir, "workspaces")
-	wsDir := filepath.Join(wsRoot, changeName)
+	wsDir := filepath.Join(wsRoot, wsName)
 
 	// Find fake-agent.sh
 	cwd, err := os.Getwd()
@@ -106,7 +108,7 @@ func setupTestEnv(t *testing.T, keepAlive bool) *testEnv {
 		t.Cleanup(func() {
 			os.Chdir(origDir)
 			exec.Command("tmux", "kill-session", "-t", sessionName).Run()
-			cmd := exec.Command("jj", "workspace", "forget", changeName)
+			cmd := exec.Command("jj", "workspace", "forget", wsName)
 			cmd.Dir = projectDir
 			cmd.Run()
 		})
@@ -114,6 +116,7 @@ func setupTestEnv(t *testing.T, keepAlive bool) *testEnv {
 
 	return &testEnv{
 		ChangeName:  changeName,
+		WSName:      wsName,
 		SessionName: sessionName,
 		ProjectDir:  projectDir,
 		WsRoot:      wsRoot,
@@ -148,8 +151,8 @@ func assertSpawn(t *testing.T, env *testEnv) {
 		t.Errorf("tmux window %q not found in session %q, got: %s", wn, env.SessionName, out)
 	}
 
-	// jj workspace exists
-	assertJJWorkspace(t, env.ChangeName)
+	// jj workspace exists (named with the app- prefix)
+	assertJJWorkspace(t, env.WSName)
 
 	// workspace directory exists
 	assertDirExists(t, env.WsDir)
