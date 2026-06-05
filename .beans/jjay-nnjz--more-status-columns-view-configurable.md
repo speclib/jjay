@@ -1,11 +1,11 @@
 ---
 # jjay-nnjz
 title: more status columns (view configurable)
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-06-04T20:24:35Z
-updated_at: 2026-06-05T00:00:00Z
+updated_at: 2026-06-05T00:21:45Z
 parent: jjay-qltp
 ---
 
