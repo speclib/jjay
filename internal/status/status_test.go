@@ -28,6 +28,10 @@ fix-bar: 789abc (no description set)
 // don't care about progress counts.
 func noTasks(_, _ string) TaskCount { return TaskCount{} }
 
+// noMerged is a mergeChecker that reports everything unmerged, for join tests
+// that don't care about the merged signal.
+func noMerged(_ string) bool { return false }
+
 const mainRoot = "/repo/main"
 const wsRoot = "/repo/ws"
 
@@ -37,7 +41,7 @@ func TestJoin_AttachedAndDetached(t *testing.T) {
 		// fix-bar has no window
 	}
 
-	spawns, err := join(sampleWSList, windows, mainRoot, wsRoot, noTasks)
+	spawns, err := join(sampleWSList, windows, mainRoot, wsRoot, noTasks, noMerged)
 	if err != nil {
 		t.Fatalf("join: %v", err)
 	}
@@ -65,7 +69,7 @@ func TestJoin_AttachedAndDetached(t *testing.T) {
 
 func TestJoin_NoTmuxAllDetached(t *testing.T) {
 	// Empty window set == tmux missing/no server.
-	spawns, err := join(sampleWSList, map[string]bool{}, mainRoot, wsRoot, noTasks)
+	spawns, err := join(sampleWSList, map[string]bool{}, mainRoot, wsRoot, noTasks, noMerged)
 	if err != nil {
 		t.Fatalf("join: %v", err)
 	}
@@ -77,7 +81,7 @@ func TestJoin_NoTmuxAllDetached(t *testing.T) {
 }
 
 func TestJoin_DefaultExcluded(t *testing.T) {
-	spawns, err := join(sampleWSList, map[string]bool{}, mainRoot, wsRoot, noTasks)
+	spawns, err := join(sampleWSList, map[string]bool{}, mainRoot, wsRoot, noTasks, noMerged)
 	if err != nil {
 		t.Fatalf("join: %v", err)
 	}
@@ -87,7 +91,7 @@ func TestJoin_DefaultExcluded(t *testing.T) {
 }
 
 func TestJoin_WSDirResolved(t *testing.T) {
-	spawns, err := join(sampleWSList, map[string]bool{}, mainRoot, wsRoot, noTasks)
+	spawns, err := join(sampleWSList, map[string]bool{}, mainRoot, wsRoot, noTasks, noMerged)
 	if err != nil {
 		t.Fatalf("join: %v", err)
 	}
@@ -105,13 +109,42 @@ func TestJoin_TaskCounterInvoked(t *testing.T) {
 		}
 		return TaskCount{}
 	}
-	spawns, err := join(sampleWSList, map[string]bool{}, mainRoot, wsRoot, tasks)
+	spawns, err := join(sampleWSList, map[string]bool{}, mainRoot, wsRoot, tasks, noMerged)
 	if err != nil {
 		t.Fatalf("join: %v", err)
 	}
 	foo, _ := spawnByChange(spawns, "add-foo")
 	if foo.Tasks.Done != 4 || foo.Tasks.Total != 10 {
 		t.Errorf("expected 4/10 tasks for add-foo, got %+v", foo.Tasks)
+	}
+}
+
+func TestJoin_MergeCheckerInvoked(t *testing.T) {
+	// add-foo is merged (work on main), fix-bar is not.
+	merged := func(change string) bool { return change == "add-foo" }
+	spawns, err := join(sampleWSList, map[string]bool{}, mainRoot, wsRoot, noTasks, merged)
+	if err != nil {
+		t.Fatalf("join: %v", err)
+	}
+	foo, _ := spawnByChange(spawns, "add-foo")
+	if !foo.Merged {
+		t.Error("add-foo should be merged")
+	}
+	bar, _ := spawnByChange(spawns, "fix-bar")
+	if bar.Merged {
+		t.Error("fix-bar should not be merged")
+	}
+}
+
+// TestIsMerged_ToleratesMissingJJ verifies the live merged check returns false
+// (not a panic or error) when jj cannot be run — status must not fail on it.
+// Only the failure path is deterministic without a real jj repo.
+func TestIsMerged_ToleratesMissingJJ(t *testing.T) {
+	if _, err := exec.LookPath("jj"); err == nil {
+		t.Skip("jj binary present; cannot test the missing-binary path")
+	}
+	if isMerged("any-change") {
+		t.Error("expected MERGED=false when jj is unavailable")
 	}
 }
 
@@ -159,14 +192,44 @@ func TestRender_ListsRows_RelativePaths(t *testing.T) {
 	Render(&b, "/repo/main", spawns)
 	out := b.String()
 
-	for _, want := range []string{"add-foo", "../ws/add-foo", "12/18 (66%)", "attached", "fix-bar", "detached", "ARCHIVED"} {
+	for _, want := range []string{"add-foo", "../ws/add-foo", "12/18 (66%)", "attached", "fix-bar", "detached", "TMUX", "MERGED", "ARCHIVED"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("render output missing %q:\n%s", want, out)
 		}
 	}
+	// The tmux-state column is now headed TMUX, not STATUS.
+	if strings.Contains(out, "STATUS") {
+		t.Errorf("render must not use the old STATUS header:\n%s", out)
+	}
 	// The absolute workspace path must NOT appear — only the relative form.
 	if strings.Contains(out, "/repo/ws/add-foo") {
 		t.Errorf("render leaked absolute path:\n%s", out)
+	}
+}
+
+func TestRender_MergedColumn(t *testing.T) {
+	// Header order must be CHANGE WORKSPACE TASKS TMUX MERGED ARCHIVED, and a
+	// merged-but-not-archived spawn is the "ready to clean up" signal.
+	spawns := []Spawn{
+		{Change: "landed", WSDir: "/repo/ws/landed", Merged: true, Archived: false, Tasks: TaskCount{Done: 3, Total: 3, Found: true}},
+		{Change: "wip", WSDir: "/repo/ws/wip", Merged: false, Archived: false, Tasks: TaskCount{Done: 1, Total: 4, Found: true}},
+	}
+	var b strings.Builder
+	Render(&b, "/repo/main", spawns)
+	out := b.String()
+
+	header := strings.SplitN(out, "\n", 2)[0]
+	for i, col := range []string{"CHANGE", "WORKSPACE", "TASKS", "TMUX", "MERGED", "ARCHIVED"} {
+		idx := strings.Index(header, col)
+		if idx < 0 {
+			t.Errorf("header missing %q: %q", col, header)
+		}
+		if i > 0 {
+			prev := []string{"CHANGE", "WORKSPACE", "TASKS", "TMUX", "MERGED", "ARCHIVED"}[i-1]
+			if strings.Index(header, prev) > idx {
+				t.Errorf("column %q must come after %q in header: %q", col, prev, header)
+			}
+		}
 	}
 }
 

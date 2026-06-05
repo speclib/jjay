@@ -157,22 +157,26 @@ Lists every spawned jj workspace with its task progress and whether a matching
 `ws-<change>` tmux window exists in the current session:
 
 ```
-CHANGE     WORKSPACE                       TASKS         ARCHIVED  STATUS
-add-foo    ../myproject-workspaces/add-foo 12/18 (66%)   no        attached
-old-feat   ../myproject-workspaces/old-feat 5/5 (100%)   yes       detached
+CHANGE     WORKSPACE                       TASKS         TMUX      MERGED  ARCHIVED
+add-foo    ../myproject-workspaces/add-foo 12/18 (66%)   attached  no      no
+old-feat   ../myproject-workspaces/old-feat 5/5 (100%)   detached  yes     yes
 ```
 
 - **WORKSPACE** is shown **relative to the main repo root**, and is resolved
   correctly even when `jjay status` is run from inside a child workspace.
 - **TASKS** is `done/total (percent)`, read from the change's `tasks.md`; `-`
   means no tasks file was found.
+- **TMUX** is **attached** when a `ws-<change>` window exists in the current
+  session, otherwise **detached** — the workspace is still open on disk, there
+  is just no live window/agent for it (e.g. after a detach or reboot). (This
+  column was previously named **STATUS**.)
+- **MERGED** is **yes** when the spawn's work has already landed on the `main`
+  bookmark (derived live from jj: the workspace has no commits `main` lacks). A
+  spawn that is **merged but not archived** is the "ready to clean up" signal.
 - **ARCHIVED** is **yes** when the change has been archived. Task counts are
   then read from `openspec/changes/archive/<date>-<change>/tasks.md` instead of
   the active `openspec/changes/<change>/tasks.md`, so archived spawns still
   report their progress.
-- **STATUS** is **attached** when a `ws-<change>` window exists in the current
-  session, otherwise **detached** — the workspace is still open on disk, there
-  is just no live window/agent for it (e.g. after a detach or reboot).
 
 Status is read-only and derives everything live from `jj workspace list` +
 `tmux list-windows`; it persists no state (see

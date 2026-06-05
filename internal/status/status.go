@@ -38,6 +38,7 @@ type Spawn struct {
 	WSDir    string    // resolved absolute workspace directory
 	Attached bool      // true if a ws-<change> window exists in the session
 	Archived bool      // true if the change is archived (tasks live under archive/)
+	Merged   bool      // true if the spawn's work has already landed on main
 	Tasks    TaskCount // openspec task progress for this workspace
 }
 
@@ -66,7 +67,7 @@ func List(session, workspaceRoot string) (spawns []Spawn, mainRoot string, err e
 
 	windows := listWindows(session)
 
-	spawns, err = join(string(wsOut), windows, mainRoot, workspaceRoot, readTaskCount)
+	spawns, err = join(string(wsOut), windows, mainRoot, workspaceRoot, readTaskCount, isMerged)
 	return spawns, mainRoot, err
 }
 
@@ -143,6 +144,28 @@ var (
 // and change name; injectable for testing.
 type taskCounter func(wsDir, change string) TaskCount
 
+// mergeChecker reports whether a spawn's work has already landed on main, given
+// its change (== jj workspace) name; injectable for testing.
+type mergeChecker func(change string) bool
+
+// isMerged reports whether the spawn's work is already on the `main` bookmark,
+// derived live from jj with no state file (ADR-006). A spawn is merged when its
+// workspace head has no commits that `main` lacks, i.e. the revset
+// `main..<change>@` is empty. A fresh/empty spawn sits on its own (empty) commit
+// ahead of main, so that revset is non-empty and it correctly reads not-merged.
+//
+// Tolerance: any jj failure (unknown workspace, no `main` bookmark, jj missing)
+// yields false rather than an error — status must not fail on it, mirroring the
+// tmux-tolerance stance in listWindows.
+func isMerged(change string) bool {
+	revset := "main.." + change + "@"
+	out, err := exec.Command("jj", "log", "-r", revset, "--no-graph", "-T", `"x"`).Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) == ""
+}
+
 // readTaskCount counts done/total checkboxes in the spawn's openspec tasks.md.
 // It looks first at the active location (<wsDir>/openspec/changes/<change>/
 // tasks.md); if that is absent, the change has been archived, so it looks under
@@ -213,18 +236,22 @@ func Render(w io.Writer, mainRoot string, spawns []Spawn) {
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "CHANGE\tWORKSPACE\tTASKS\tARCHIVED\tSTATUS")
+	fmt.Fprintln(tw, "CHANGE\tWORKSPACE\tTASKS\tTMUX\tMERGED\tARCHIVED")
 	for _, s := range spawns {
 		state := "detached"
 		if s.Attached {
 			state = "attached"
+		}
+		merged := "no"
+		if s.Merged {
+			merged = "yes"
 		}
 		archived := "no"
 		if s.Archived {
 			archived = "yes"
 		}
 		rel := workspace.RelativeToMain(mainRoot, s.WSDir)
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", s.Change, rel, formatTasks(s.Tasks), archived, state)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", s.Change, rel, formatTasks(s.Tasks), state, merged, archived)
 	}
 	tw.Flush()
 }
@@ -232,7 +259,7 @@ func Render(w io.Writer, mainRoot string, spawns []Spawn) {
 // join builds the spawn list from raw `jj workspace list` output and the set of
 // current tmux window names. It is pure aside from the injected taskCounter, so
 // it can be unit-tested. Workspace dirs are anchored on mainRoot.
-func join(wsListOut string, windows map[string]bool, mainRoot, workspaceRoot string, tasks taskCounter) ([]Spawn, error) {
+func join(wsListOut string, windows map[string]bool, mainRoot, workspaceRoot string, tasks taskCounter, merged mergeChecker) ([]Spawn, error) {
 	var spawns []Spawn
 	for _, name := range parseWorkspaceNames(wsListOut) {
 		wsDir, err := workspace.WorkspaceDirFrom(mainRoot, name, workspaceRoot)
@@ -245,6 +272,7 @@ func join(wsListOut string, windows map[string]bool, mainRoot, workspaceRoot str
 			WSDir:    wsDir,
 			Attached: windows[workspace.WindowName(name)],
 			Archived: tc.Archived,
+			Merged:   merged(name),
 			Tasks:    tc,
 		})
 	}
