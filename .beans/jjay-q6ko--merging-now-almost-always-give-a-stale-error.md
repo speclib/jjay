@@ -5,8 +5,8 @@ status: todo
 type: bug
 priority: critical
 created_at: 2026-06-04T22:23:50Z
-updated_at: 2026-06-05T11:12:00Z
-parent: jjay-ykyx
+updated_at: 2026-06-05T11:56:13Z
+parent: jjay-hjjg
 ---
 
 this is how I solve it from the workspace claude session:

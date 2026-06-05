@@ -5,8 +5,8 @@ status: draft
 type: task
 priority: high
 created_at: 2026-06-05T10:01:37Z
-updated_at: 2026-06-05T11:12:19Z
-parent: jjay-qltp
+updated_at: 2026-06-05T11:59:59Z
+parent: jjay-hjjg
 ---
 
 Merge-without-AI is the HEART of jjay. Today `jjay merge` proves only a negative — "no conflicts". It does NOT prove the work actually landed. The prop-jjay-7rol merge was conflict-free but produced an EMPTY merge commit (work was in @-, @ was empty); "merged" was reported, nothing visibly changed. Conflict-free != merged.

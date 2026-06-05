@@ -1,11 +1,11 @@
 ---
 # jjay-oeay
 title: manually test shell completion in the installed jjay (0.4)
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-06-04T23:52:58Z
-updated_at: 2026-06-04T23:52:58Z
+updated_at: 2026-06-05T11:56:48Z
 parent: jjay-hjjg
 ---
 
