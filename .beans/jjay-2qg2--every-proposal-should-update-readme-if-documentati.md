@@ -5,7 +5,8 @@ status: draft
 type: task
 priority: normal
 created_at: 2026-06-03T19:45:59Z
-updated_at: 2026-06-04T14:53:34Z
+updated_at: 2026-06-05T10:10:27Z
+parent: jjay-5y1a
 ---
 
 it should check it update are needed and update the readme in the apply

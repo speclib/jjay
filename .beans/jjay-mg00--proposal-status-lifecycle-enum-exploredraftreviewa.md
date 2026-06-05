@@ -5,8 +5,10 @@ status: draft
 type: task
 priority: normal
 created_at: 2026-06-04T23:33:47Z
-updated_at: 2026-06-04T23:55:38Z
+updated_at: 2026-06-05T10:05:53Z
 parent: jjay-5y1a
+blocked_by:
+    - jjay-atq6
 ---
 
 Split out of jjay-4ulx (spawn verbs). A `proposal` spawn (prop-<slug>) should carry a lifecycle status, since explore is just the earliest state of a proposal, not a separate thing.

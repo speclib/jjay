@@ -5,6 +5,9 @@ status: draft
 type: task
 priority: normal
 created_at: 2026-06-04T20:47:31Z
-updated_at: 2026-06-04T20:47:33Z
+updated_at: 2026-06-05T10:09:26Z
+parent: jjay-5y1a
+blocked_by:
+    - jjay-rse4
 ---
 

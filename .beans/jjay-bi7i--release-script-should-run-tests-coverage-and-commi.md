@@ -5,8 +5,10 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-06-05T00:40:03Z
-updated_at: 2026-06-05T09:37:16Z
+updated_at: 2026-06-05T10:05:53Z
 parent: jjay-hjjg
+blocked_by:
+    - jjay-gwpc
 ---
 
 `scripts/release.sh` does NOT run tests, coverage, or the README badge update — it relies on the manual pre-release checklist in RELEASING.md. Automate it so a release can't ship with failing tests or a stale badge.
