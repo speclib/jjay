@@ -29,7 +29,9 @@ func TestFullLifecycle(t *testing.T) {
 			Session:       env.SessionName,
 			WorkspaceRoot: env.WsRoot,
 		}
-		if err := cleanup.Cleanup(env.ChangeName, cleanupOpts); err != nil {
+		// Cleanup keys off the workspace name (verb-prefixed), not the change
+		// name — this is what `status` surfaces and `/jjay:cleanup` is given.
+		if err := cleanup.Cleanup(env.WSName, cleanupOpts); err != nil {
 			t.Fatalf("Cleanup() failed: %v", err)
 		}
 		assertCleanedUp(t, env)
@@ -83,7 +85,18 @@ func assertStatus(t *testing.T, env *testEnv) {
 	status.Render(&b, mainRoot, spawns)
 	out := b.String()
 
-	header := strings.SplitN(out, "\n", 2)[0]
+	// In the two-table layout the CHANGES table's column header follows the
+	// "CHANGES" title line, so find the header row rather than assuming line 1.
+	var header string
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "CHANGE ") || strings.HasPrefix(line, "CHANGE\t") {
+			header = line
+			break
+		}
+	}
+	if header == "" {
+		t.Fatalf("could not find CHANGES column header in status output:\n%s", out)
+	}
 	for _, col := range []string{"TMUX", "MERGED"} {
 		if !strings.Contains(header, col) {
 			t.Errorf("status header missing %q column: %q", col, header)
@@ -105,6 +118,6 @@ func assertCleanedUp(t *testing.T, env *testEnv) {
 		t.Errorf("tmux window %q still exists after cleanup", wn)
 	}
 
-	assertNoJJWorkspace(t, env.ChangeName)
+	assertNoJJWorkspace(t, env.WSName)
 	assertDirNotExists(t, env.WsDir)
 }

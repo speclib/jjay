@@ -23,6 +23,14 @@ import (
 // in `jj workspace list` but is not a spawn and is excluded from status.
 const defaultWorkspaceName = "default"
 
+// Verb-prefixes encode the spawn kind in the workspace/window name (ADR-011).
+// Mirror of spawn.ApplyPrefix/spawn.ProposalPrefix; duplicated here so status
+// (a data-source reader) does not import the command package.
+const (
+	applyPrefix    = "app-"
+	proposalPrefix = "prop-"
+)
+
 // TaskCount summarizes the openspec tasks.md checkbox progress for a spawn.
 type TaskCount struct {
 	Done     int
@@ -31,15 +39,34 @@ type TaskCount struct {
 	Archived bool // true when the tasks were read from the archive location
 }
 
+// Kind classifies a spawn by its name prefix (ADR-011): an apply spawn tracks
+// an existing openspec change (`app-*`); a proposal spawn is prompt-seeded and
+// may not have a change yet (`prop-*`).
+type Kind int
+
+const (
+	KindApply Kind = iota
+	KindProposal
+)
+
 // Spawn describes a single spawned jj workspace and whether its tmux window
 // currently exists in the target session.
+//
+// Name is the jj workspace name (verb-prefixed). For an apply spawn, Change is
+// the openspec change name (Name with the `app-` prefix stripped) and equals
+// the change directory inside the workspace. For a proposal spawn the workspace
+// name does NOT equal any change name — the agent invents a differently-named
+// change inside the workspace (ADR-011) — so Change is empty and change-shaped
+// columns (TASKS/ARCHIVED) do not apply.
 type Spawn struct {
-	Change   string    // jj workspace name == openspec change name
+	Name     string    // jj workspace name (e.g. app-add-foo, prop-dark-mode)
+	Kind     Kind      // apply vs proposal, from the name prefix
+	Change   string    // openspec change name for apply spawns; empty for proposals
 	WSDir    string    // resolved absolute workspace directory
-	Attached bool      // true if a ws-<change> window exists in the session
+	Attached bool      // true if a ws-<name> window exists in the session
 	Archived bool      // true if the change is archived (tasks live under archive/)
 	Merged   bool      // true if the spawn's work has already landed on main
-	Tasks    TaskCount // openspec task progress for this workspace
+	Tasks    TaskCount // openspec task progress (apply spawns only)
 }
 
 // List returns the spawned workspaces for the repository, scoped to the given
@@ -226,34 +253,72 @@ func formatTasks(t TaskCount) string {
 	return fmt.Sprintf("%d/%d (%d%%)", t.Done, t.Total, pct)
 }
 
-// Render writes a human-readable table of spawns to w. With no spawns it prints
-// a "no running spawns" line. The WORKSPACE column is shown relative to
-// mainRoot. Exit-zero behavior is the caller's concern.
+// Render writes a human-readable view of spawns to w, split into two tables by
+// kind (ADR-011): CHANGES (apply spawns, with change-shaped columns) and
+// PROPOSAL SPAWNS (prompt-seeded, no change yet). With no spawns it prints a
+// "no running spawns" line. The WORKSPACE column is shown relative to mainRoot.
+// A table with no rows is omitted. Exit-zero behavior is the caller's concern.
 func Render(w io.Writer, mainRoot string, spawns []Spawn) {
 	if len(spawns) == 0 {
 		fmt.Fprintln(w, "No running spawns.")
 		return
 	}
 
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "CHANGE\tWORKSPACE\tTASKS\tTMUX\tMERGED\tARCHIVED")
+	var changes, proposals []Spawn
 	for _, s := range spawns {
-		state := "detached"
-		if s.Attached {
-			state = "attached"
+		if s.Kind == KindProposal {
+			proposals = append(proposals, s)
+		} else {
+			changes = append(changes, s)
 		}
-		merged := "no"
-		if s.Merged {
-			merged = "yes"
-		}
-		archived := "no"
-		if s.Archived {
-			archived = "yes"
-		}
-		rel := workspace.RelativeToMain(mainRoot, s.WSDir)
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", s.Change, rel, formatTasks(s.Tasks), state, merged, archived)
 	}
-	tw.Flush()
+
+	if len(changes) > 0 {
+		fmt.Fprintln(w, "CHANGES")
+		tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(tw, "CHANGE\tWORKSPACE\tTASKS\tTMUX\tMERGED\tARCHIVED")
+		for _, s := range changes {
+			merged := "no"
+			if s.Merged {
+				merged = "yes"
+			}
+			archived := "no"
+			if s.Archived {
+				archived = "yes"
+			}
+			rel := workspace.RelativeToMain(mainRoot, s.WSDir)
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", s.Change, rel, formatTasks(s.Tasks), stateOf(s), merged, archived)
+		}
+		tw.Flush()
+	}
+
+	if len(proposals) > 0 {
+		if len(changes) > 0 {
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintln(w, "PROPOSAL SPAWNS")
+		tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(tw, "PROPOSAL\tWORKSPACE\tMERGED\tTMUX")
+		for _, s := range proposals {
+			merged := "no"
+			if s.Merged {
+				merged = "yes"
+			}
+			rel := workspace.RelativeToMain(mainRoot, s.WSDir)
+			// Display the bare slug (workspace name minus the prop- prefix).
+			name := strings.TrimPrefix(s.Name, proposalPrefix)
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", name, rel, merged, stateOf(s))
+		}
+		tw.Flush()
+	}
+}
+
+// stateOf renders the attach state of a spawn.
+func stateOf(s Spawn) string {
+	if s.Attached {
+		return "attached"
+	}
+	return "detached"
 }
 
 // join builds the spawn list from raw `jj workspace list` output and the set of
@@ -262,19 +327,48 @@ func Render(w io.Writer, mainRoot string, spawns []Spawn) {
 func join(wsListOut string, windows map[string]bool, mainRoot, workspaceRoot string, tasks taskCounter, merged mergeChecker) ([]Spawn, error) {
 	var spawns []Spawn
 	for _, name := range parseWorkspaceNames(wsListOut) {
+		// The workspace dir is keyed on the (prefixed) workspace name; the
+		// directory carries the same name (ADR-011: prefix flows through naming).
 		wsDir, err := workspace.WorkspaceDirFrom(mainRoot, name, workspaceRoot)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve workspace dir for %q: %w", name, err)
 		}
-		tc := tasks(wsDir, name)
-		spawns = append(spawns, Spawn{
-			Change:   name,
+
+		s := Spawn{
+			Name:     name,
 			WSDir:    wsDir,
 			Attached: windows[workspace.WindowName(name)],
-			Archived: tc.Archived,
-			Merged:   merged(name),
-			Tasks:    tc,
-		})
+			// Merged is keyed on the jj workspace name (the `<name>@` revset),
+			// not the openspec change name — a proposal spawn has no matching
+			// change name, but its workspace head still merges by name.
+			Merged: merged(name),
+		}
+
+		switch {
+		case strings.HasPrefix(name, proposalPrefix):
+			// Proposal spawn: the produced change is named by the agent and is
+			// NOT the workspace name, so we do not infer a change name or read
+			// change-shaped task progress from it.
+			s.Kind = KindProposal
+		case strings.HasPrefix(name, applyPrefix):
+			s.Kind = KindApply
+			s.Change = strings.TrimPrefix(name, applyPrefix)
+		default:
+			// Legacy/unprefixed workspace (pre-ADR-011): treat as an apply spawn
+			// whose change name equals the workspace name, preserving old behavior.
+			s.Kind = KindApply
+			s.Change = name
+		}
+
+		if s.Kind == KindApply {
+			// The change directory inside the workspace uses the un-prefixed
+			// change name, not the workspace name.
+			tc := tasks(wsDir, s.Change)
+			s.Archived = tc.Archived
+			s.Tasks = tc
+		}
+
+		spawns = append(spawns, s)
 	}
 	return spawns, nil
 }

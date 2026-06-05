@@ -74,12 +74,15 @@ func reopenDetached(spawns []status.Spawn, sessionName string, open openWindowFu
 			continue // window already exists; do not duplicate
 		}
 		opts := spawn.SpawnOptions{Session: sessionName}
-		if err := open(s.Change, s.WSDir, opts); err != nil {
-			fmt.Fprintf(out, "session-open: could not reopen spawn %q: %v\n", s.Change, err)
-			failed = append(failed, s.Change)
+		// Reopen by the (prefixed) workspace name, which keys the jj workspace,
+		// directory, and window — not the openspec change name, which a proposal
+		// spawn does not have (ADR-011).
+		if err := open(s.Name, s.WSDir, opts); err != nil {
+			fmt.Fprintf(out, "session-open: could not reopen spawn %q: %v\n", s.Name, err)
+			failed = append(failed, s.Name)
 			continue
 		}
-		fmt.Fprintf(out, "session-open: reopened spawn %q\n", s.Change)
+		fmt.Fprintf(out, "session-open: reopened spawn %q\n", s.Name)
 	}
 	if len(failed) > 0 {
 		fmt.Fprintf(out, "session-open: %d spawn(s) failed to reopen: %s\n", len(failed), strings.Join(failed, ", "))

@@ -76,8 +76,8 @@ func (r *recordingOpener) open(change, wsDir string, _ spawn.SpawnOptions) error
 
 func TestReopenDetached_ReopensAllDetached(t *testing.T) {
 	spawns := []status.Spawn{
-		{Change: "add-foo", WSDir: "/ws/add-foo", Attached: false},
-		{Change: "fix-bar", WSDir: "/ws/fix-bar", Attached: false},
+		{Name: "app-add-foo", Change: "add-foo", WSDir: "/ws/add-foo", Attached: false},
+		{Name: "app-fix-bar", Change: "fix-bar", WSDir: "/ws/fix-bar", Attached: false},
 	}
 	rec := &recordingOpener{}
 	var out strings.Builder
@@ -99,30 +99,30 @@ func TestReopenDetached_None(t *testing.T) {
 
 func TestReopenDetached_SkipsAttached_NoDuplicate(t *testing.T) {
 	spawns := []status.Spawn{
-		{Change: "add-foo", WSDir: "/ws/add-foo", Attached: true},  // already has window
-		{Change: "fix-bar", WSDir: "/ws/fix-bar", Attached: false}, // needs reopen
+		{Name: "app-add-foo", Change: "add-foo", WSDir: "/ws/add-foo", Attached: true},  // already has window
+		{Name: "app-fix-bar", Change: "fix-bar", WSDir: "/ws/fix-bar", Attached: false}, // needs reopen
 	}
 	rec := &recordingOpener{}
 	var out strings.Builder
 	reopenDetached(spawns, "sess", rec.open, &out)
 
-	if len(rec.opened) != 1 || rec.opened[0] != "fix-bar" {
-		t.Errorf("expected only fix-bar reopened, got %v", rec.opened)
+	if len(rec.opened) != 1 || rec.opened[0] != "app-fix-bar" {
+		t.Errorf("expected only app-fix-bar reopened, got %v", rec.opened)
 	}
 }
 
 func TestReopenDetached_OneFailsNonFatal(t *testing.T) {
 	spawns := []status.Spawn{
-		{Change: "add-foo", WSDir: "/ws/add-foo", Attached: false},
-		{Change: "fix-bar", WSDir: "/ws/fix-bar", Attached: false},
+		{Name: "app-add-foo", Change: "add-foo", WSDir: "/ws/add-foo", Attached: false},
+		{Name: "app-fix-bar", Change: "fix-bar", WSDir: "/ws/fix-bar", Attached: false},
 	}
-	rec := &recordingOpener{failFor: map[string]bool{"add-foo": true}}
+	rec := &recordingOpener{failFor: map[string]bool{"app-add-foo": true}}
 	var out strings.Builder
 	reopenDetached(spawns, "sess", rec.open, &out)
 
 	// fix-bar still reopened despite add-foo failing.
-	if len(rec.opened) != 1 || rec.opened[0] != "fix-bar" {
-		t.Errorf("expected fix-bar reopened, got %v", rec.opened)
+	if len(rec.opened) != 1 || rec.opened[0] != "app-fix-bar" {
+		t.Errorf("expected app-fix-bar reopened, got %v", rec.opened)
 	}
 	// Failure is reported.
 	if !strings.Contains(out.String(), "add-foo") {

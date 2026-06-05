@@ -19,6 +19,15 @@ func spawnByChange(spawns []Spawn, change string) (Spawn, bool) {
 	return Spawn{}, false
 }
 
+func spawnByName(spawns []Spawn, name string) (Spawn, bool) {
+	for _, s := range spawns {
+		if s.Name == name {
+			return s, true
+		}
+	}
+	return Spawn{}, false
+}
+
 const sampleWSList = `default: abc123 (no description set)
 add-foo: def456 (no description set)
 fix-bar: 789abc (no description set)
@@ -148,6 +157,101 @@ func TestIsMerged_ToleratesMissingJJ(t *testing.T) {
 	}
 }
 
+const prefixedWSList = `default: abc123 (no description set)
+app-add-foo: def456 (no description set)
+prop-dark-mode: 789abc (no description set)
+`
+
+func TestJoin_ClassifiesByPrefix(t *testing.T) {
+	// Apply spawns read tasks via the un-prefixed change name; proposal spawns
+	// don't (their change name is unknown / agent-invented).
+	tasks := func(wsDir, change string) TaskCount {
+		if change == "add-foo" {
+			return TaskCount{Done: 2, Total: 4, Found: true}
+		}
+		// A proposal spawn must never trigger a change-shaped task read.
+		t.Errorf("unexpected task read for change %q", change)
+		return TaskCount{}
+	}
+	spawns, err := join(prefixedWSList, map[string]bool{}, mainRoot, wsRoot, tasks, noMerged)
+	if err != nil {
+		t.Fatalf("join: %v", err)
+	}
+
+	apply, ok := spawnByName(spawns, "app-add-foo")
+	if !ok {
+		t.Fatal("expected app-add-foo spawn")
+	}
+	if apply.Kind != KindApply || apply.Change != "add-foo" {
+		t.Errorf("app-add-foo: Kind=%v Change=%q, want apply/add-foo", apply.Kind, apply.Change)
+	}
+	if apply.Tasks.Done != 2 || apply.Tasks.Total != 4 {
+		t.Errorf("app-add-foo tasks = %+v, want 2/4", apply.Tasks)
+	}
+
+	prop, ok := spawnByName(spawns, "prop-dark-mode")
+	if !ok {
+		t.Fatal("expected prop-dark-mode spawn")
+	}
+	if prop.Kind != KindProposal {
+		t.Errorf("prop-dark-mode Kind = %v, want proposal", prop.Kind)
+	}
+	if prop.Change != "" {
+		t.Errorf("proposal spawn must not infer a change name, got %q", prop.Change)
+	}
+	if prop.Tasks.Found {
+		t.Errorf("proposal spawn must not carry task counts, got %+v", prop.Tasks)
+	}
+}
+
+func TestJoin_AttachedKeyedOnWorkspaceName(t *testing.T) {
+	// The window name is ws-<workspace-name>, including the prefix.
+	windows := map[string]bool{workspace.WindowName("prop-dark-mode"): true}
+	spawns, err := join(prefixedWSList, windows, mainRoot, wsRoot, noTasks, noMerged)
+	if err != nil {
+		t.Fatalf("join: %v", err)
+	}
+	prop, _ := spawnByName(spawns, "prop-dark-mode")
+	if !prop.Attached {
+		t.Error("prop-dark-mode should be attached (ws-prop-dark-mode window exists)")
+	}
+}
+
+func TestRender_TwoTables(t *testing.T) {
+	spawns := []Spawn{
+		{Name: "app-add-foo", Kind: KindApply, Change: "add-foo", WSDir: "/repo/ws/app-add-foo", Attached: true, Tasks: TaskCount{Done: 1, Total: 2, Found: true}},
+		{Name: "prop-dark-mode", Kind: KindProposal, WSDir: "/repo/ws/prop-dark-mode", Attached: false},
+	}
+	var b strings.Builder
+	Render(&b, "/repo/main", spawns)
+	out := b.String()
+
+	for _, want := range []string{"CHANGES", "PROPOSAL SPAWNS", "add-foo", "dark-mode", "1/2 (50%)"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("render output missing %q:\n%s", want, out)
+		}
+	}
+	// The proposal table must come after the changes table.
+	if strings.Index(out, "CHANGES") > strings.Index(out, "PROPOSAL SPAWNS") {
+		t.Errorf("CHANGES table should precede PROPOSAL SPAWNS:\n%s", out)
+	}
+}
+
+func TestRender_OnlyProposals(t *testing.T) {
+	spawns := []Spawn{
+		{Name: "prop-dark-mode", Kind: KindProposal, WSDir: "/repo/ws/prop-dark-mode"},
+	}
+	var b strings.Builder
+	Render(&b, "/repo/main", spawns)
+	out := b.String()
+	if !strings.Contains(out, "PROPOSAL SPAWNS") {
+		t.Errorf("expected PROPOSAL SPAWNS table, got:\n%s", out)
+	}
+	if strings.Contains(out, "CHANGES") {
+		t.Errorf("CHANGES table should be omitted when no apply spawns exist:\n%s", out)
+	}
+}
+
 func TestParseWorkspaceNames_IgnoresJunk(t *testing.T) {
 	out := "default: x\n\nadd-foo: y\nnot a workspace line\n"
 	names := parseWorkspaceNames(out)
@@ -218,7 +322,18 @@ func TestRender_MergedColumn(t *testing.T) {
 	Render(&b, "/repo/main", spawns)
 	out := b.String()
 
-	header := strings.SplitN(out, "\n", 2)[0]
+	// Locate the CHANGES table's column header (it follows the "CHANGES" title
+	// line in the two-table layout).
+	var header string
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "CHANGE\t") || strings.HasPrefix(strings.TrimSpace(line), "CHANGE ") {
+			header = line
+			break
+		}
+	}
+	if header == "" {
+		t.Fatalf("could not find CHANGES column header in output:\n%s", out)
+	}
 	for i, col := range []string{"CHANGE", "WORKSPACE", "TASKS", "TMUX", "MERGED", "ARCHIVED"} {
 		idx := strings.Index(header, col)
 		if idx < 0 {

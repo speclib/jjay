@@ -4,6 +4,10 @@
 
 ### Added
 
+- **`jjay spawn apply` / `jjay spawn proposal`** — two spawn verbs
+  - `spawn apply <change>` is the old spawn, now named `app-<change>`; `spawn proposal <prompt> [--mode explore|propose]` seeds new work in `prop-<slug>` with a code-derived slug (no AI), freeing the orchestrator for conflict work.
+  - No bare `spawn <change>` form — `/jjay:spawn` and the spawn integration tests migrate to `spawn apply`. Pre-existing unprefixed workspaces (none expected, single pre-1.0 user) are still read by `status` via a legacy fallback.
+  - `status` splits CHANGES (`app-*`) from PROPOSAL SPAWNS (`prop-*`); a proposal's workspace name is never assumed equal to its produced change. See [proposal](openspec/changes/archive/add-spawn-verbs/proposal.md), [ADR-011](openspec/changes/archive/add-spawn-verbs/adrs/011-spawn-verbs-and-slug-identity.md).
 - **`jjay init [path]`** — idempotent, non-destructive project bootstrap
   - openspec (via `openspec init --tools claude`), `/jjay:*` commands + skill into `.claude/`, `AGENTS.md`; `--with-jj`/`--with-hooks` opt-in; `--force` to overwrite. New `internal/init`. See [proposal](openspec/changes/archive/2026-06-05-add-init-command/proposal.md), [ADR-008](openspec/changes/archive/2026-06-05-add-init-command/adrs/008-init-idempotent-orchestrator.md).
 - **Unit tests for `internal/cleanup`** — the last untested command package
