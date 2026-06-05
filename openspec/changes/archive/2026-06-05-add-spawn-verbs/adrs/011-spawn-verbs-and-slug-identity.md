@@ -1,6 +1,6 @@
 # ADR-011: Two spawn flows; code-derived immutable slug identity for proposal spawns
 
-**Status**: Proposed
+**Status**: Accepted
 
 ## Context
 

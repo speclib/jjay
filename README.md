@@ -2,7 +2,7 @@
   <img src="artwork/hero.png" alt="jjay — Control the flock. Manage parallel agent sessions with jj, tmux and openspec." />
 </p>
 
-[![Coverage](https://img.shields.io/badge/coverage-12.5%25-red)](coverage.html)
+[![Coverage](https://img.shields.io/badge/coverage-53.8%25-red)](coverage.html)
 
 # jjay
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-06-05
+
 ### Added
 
 - **`jjay spawn apply` / `jjay spawn proposal`** — two spawn verbs
