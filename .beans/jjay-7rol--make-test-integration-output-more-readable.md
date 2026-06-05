@@ -5,8 +5,8 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-06-04T21:46:42Z
-updated_at: 2026-06-05T00:23:10Z
-parent: jjay-qltp
+updated_at: 2026-06-05T09:36:58Z
+parent: jjay-hjjg
 ---
 
 - cleanup

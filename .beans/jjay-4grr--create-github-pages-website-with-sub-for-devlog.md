@@ -5,7 +5,8 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-06-03T22:23:56Z
-updated_at: 2026-06-03T22:41:28Z
+updated_at: 2026-06-05T09:37:34Z
+parent: jjay-hjjg
 ---
 
 frontpage should be compact telling about the project. Audience advanged developers (they use advanged tools)

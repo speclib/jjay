@@ -5,9 +5,11 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-06-05T00:39:22Z
-updated_at: 2026-06-05T00:39:22Z
-parent: jjay-qltp
+updated_at: 2026-06-05T09:36:47Z
+parent: jjay-hjjg
 ---
+
+initial bean was: jjay-7rol
 
 `make coverage` currently runs unit tests only — `go test -coverprofile ./...` with NO `-tags integration`. So integration-tested code (the whole spawn → cleanup lifecycle, merge scenarios, the status subtest) contributes 0 to the reported coverage %, and the README badge understates real coverage.
 
