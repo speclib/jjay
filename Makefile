@@ -12,7 +12,11 @@ test-spawn:
 	go test -tags integration ./test/integration/ -v -run TestSpawn$$
 
 test-integration: clean-tests
-	go test -tags integration -v ./...
+	@if command -v gotestsum >/dev/null 2>&1; then \
+		gotestsum --no-color=false --format testname -- -tags integration ./...; \
+	else \
+		go test -tags integration ./...; \
+	fi
 
 clean-tests:
 	-tmux list-sessions -F '#{session_name}' 2>/dev/null | grep '^jjay-test-' | xargs -r -n1 tmux kill-session -t

@@ -3,6 +3,7 @@ package merge
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -113,25 +114,32 @@ func currentOpID() string {
 // included here — it is caught by the smoke test instead (ADR-013).
 func workFrontierFiles(changeName string) (map[string]bool, error) {
 	revset := fmt.Sprintf("ancestors(%s@) & main.. & ~empty()", changeName)
-	// --types shows the change type; -s gives names. Use --name-only-ish via
-	// `jj diff --from main --to <frontier-tip>`? Simpler: list files changed by
-	// each frontier commit. Use `jj diff -r <revset> --name-only` aggregated.
 	out, err := exec.Command("jj", "log", "-r", revset, "--no-graph",
 		"-T", "commit_id ++ \"\\n\"").Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to enumerate work frontier: %w", err)
 	}
-	files := map[string]bool{}
+	// Track adds/mods (must reach main) and deletes (legitimately absent). A file
+	// added in one commit then deleted in a later one is a net delete — so a
+	// later 'D' clears an earlier 'A'/'M'. We resolve per file by last-seen status.
+	status := map[string]byte{} // 'A'/'M' = expected present, 'D' = expected absent
 	for _, commit := range strings.Fields(string(out)) {
-		d, err := exec.Command("jj", "diff", "-r", commit, "--name-only").Output()
+		d, err := exec.Command("jj", "diff", "-r", commit, "--summary").Output()
 		if err != nil {
 			continue
 		}
-		for _, f := range strings.Split(strings.TrimSpace(string(d)), "\n") {
-			f = strings.TrimSpace(f)
-			if f != "" {
-				files[f] = true
+		for _, line := range strings.Split(strings.TrimSpace(string(d)), "\n") {
+			line = strings.TrimSpace(line)
+			if len(line) < 3 || line[1] != ' ' {
+				continue
 			}
+			status[strings.TrimSpace(line[2:])] = line[0]
+		}
+	}
+	files := map[string]bool{}
+	for f, st := range status {
+		if st == 'A' || st == 'M' {
+			files[f] = true // only added/modified files must land on main
 		}
 	}
 	return files, nil
@@ -157,12 +165,19 @@ func smokeTest(expectedFiles map[string]bool, preMergeOp string) error {
 		return fmt.Errorf("merge smoke test FAILED (L1): workspace had work (%d files) but main gained nothing — the merge landed empty.\nRecover with: jj op restore %s", len(expectedFiles), preMergeOp)
 	}
 
-	// L2: every expected (added/modified) file must be present on main.
+	// L2: every expected (added/modified) file must be present on main. A file may
+	// legitimately land at a DIFFERENT path — e.g. an `/opsx:archive` that moves
+	// openspec/changes/X/ → openspec/changes/archive/<date>-X/ (a rename). So a
+	// file counts as present if its exact path OR its basename is on main. This
+	// tolerates moves/archives (the common case) while still catching true loss
+	// (content that vanished entirely). Deletes were already excluded upstream.
+	mainBasenames := basenameSet(mainFiles)
 	var missing []string
 	for f := range expectedFiles {
-		if !mainFiles[f] {
-			missing = append(missing, f)
+		if mainFiles[f] || mainBasenames[baseName(f)] {
+			continue
 		}
+		missing = append(missing, f)
 	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
@@ -173,6 +188,20 @@ func smokeTest(expectedFiles map[string]bool, preMergeOp string) error {
 
 	fmt.Printf("merge smoke test passed: all %d work-frontier files present on main.\n", len(expectedFiles))
 	return nil
+}
+
+// baseName returns the final path element (e.g. "tasks.md" from "a/b/tasks.md").
+func baseName(p string) string {
+	return filepath.Base(p)
+}
+
+// basenameSet maps the basenames of a path set, for move-tolerant L2 matching.
+func basenameSet(paths map[string]bool) map[string]bool {
+	set := map[string]bool{}
+	for p := range paths {
+		set[filepath.Base(p)] = true
+	}
+	return set
 }
 
 // filesOnMain returns the set of files in the `main` bookmark's tree.

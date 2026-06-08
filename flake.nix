@@ -58,6 +58,7 @@
               go
               gopls
               goreleaser
+              gotestsum
               gum
             ];
           };

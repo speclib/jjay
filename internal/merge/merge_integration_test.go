@@ -385,6 +385,32 @@ func TestSmokeTest_L1L2(t *testing.T) {
 	}
 }
 
+// TestSmokeTest_ToleratesArchiveMove guards the false-positive fixed after a real
+// merge: a file expected at openspec/changes/X/tasks.md that landed on main at the
+// archived path openspec/changes/archive/<date>-X/tasks.md (same basename) MUST be
+// treated as present — an /opsx:archive during the merge is a rename, not a loss.
+func TestSmokeTest_ToleratesArchiveMove(t *testing.T) {
+	dir := testRepo(t)
+	defer os.RemoveAll(dir)
+	origDir, _ := os.Getwd()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	defer os.Chdir(origDir)
+
+	// Put a file on main at an "archived" path.
+	writeFile(t, dir, "openspec/changes/archive/2026-06-08-foo/tasks.md", "- [x] done")
+	run(t, dir, "jj", "describe", "-m", "archived foo")
+	run(t, dir, "jj", "bookmark", "set", "main", "-r", "@")
+	run(t, dir, "jj", "new")
+
+	// The frontier captured it at the PRE-archive path. Same basename → present.
+	expected := map[string]bool{"openspec/changes/foo/tasks.md": true}
+	if err := smokeTest(expected, "op123"); err != nil {
+		t.Errorf("archive-move (same basename, different dir) must pass L2, got: %v", err)
+	}
+}
+
 // TestMerge_MainAddsNewFiles is the mirror of TestMerge_WorkspaceAddsNewFiles:
 // main creates new work AHEAD of the `main` bookmark (committed in @ but never
 // bookmarked) after the workspace base. Before the ADR-010 fix, merge based the
