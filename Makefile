@@ -1,6 +1,6 @@
 VERSION := $(shell cat VERSION)
 
-.PHONY: build test test-spawn test-integration lint coverage badge
+.PHONY: build test test-spawn test-integration lint coverage badge clean-tests
 
 build:
 	go build -ldflags "-X main.version=$(VERSION)" -o jjay ./cmd/jjay
@@ -11,8 +11,12 @@ test:
 test-spawn:
 	go test -tags integration ./test/integration/ -v -run TestSpawn$$
 
-test-integration:
+test-integration: clean-tests
 	go test -tags integration -v ./...
+
+clean-tests:
+	-tmux list-sessions -F '#{session_name}' 2>/dev/null | grep '^jjay-test-' | xargs -r -n1 tmux kill-session -t
+	rm -rf /tmp/jjay-test-* /tmp/jjay-merge-test-*
 
 lint:
 	go vet ./...
