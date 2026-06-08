@@ -19,7 +19,7 @@ This is the key architectural fact driving the design: a pure formatter is neces
 
 **Non-Goals:**
 - Changing any production/CLI behavior or the shipped binary.
-- Suppressing subprocess banners on green runs — the chosen format keeps them visible every run (explicit user preference).
+- Keeping subprocess banners visible on green runs — the chosen `testname` format folds them away on pass and surfaces them only on failure (color/scan-ability preferred over always-on detail).
 - Reworking `make test` (unit tests) — only the integration target changes.
 - Adding a Go module dependency — gotestsum is a dev-time tool, Nix-provided.
 
@@ -33,10 +33,10 @@ This is the key architectural fact driving the design: a pure formatter is neces
 - *Home-grown formatter over `go test -json`* — zero dependency, but reinvents color/summary/format handling and still can't touch the banner noise. Not worth the code to own.
 - *Status quo (`go test -v`)* — rejected; that's the problem.
 
-### Decision: Use `--format standard-verbose`, not `testname`
-**Why:** gotestsum's quieter formats (`testname`, `pkgname`) hide passing-test body output — they are quiet-on-green. The user explicitly wants subprocess banners visible on every run. `standard-verbose` preserves full per-test output while still adding color and the summary footer. This is a deliberate trade of brevity for always-on forensic detail.
+### Decision: Use `--format testname` (with `--no-color=false`)
+**Why:** `standard-verbose` keeps all passing-test body output on screen, so the run is dominated by plain (uncolored) subprocess banners with color only on the result tokens — in practice "very little color". `testname` emits one colored `✓/✗ Test` line per test, so the screen is mostly colored result lines that are fast to scan; subprocess banners are folded away on passing tests and surfaced only when a test fails (when you actually need the detail). gotestsum 1.13.0 defaults `--no-color` to `true`, so the recipe passes `--no-color=false` to enable color on a TTY.
 
-**Trade-off:** Green runs remain long. Accepted per the stated preference; if it later grates, switching to `--format testname` is a one-word Makefile change.
+**Trade-off:** Subprocess banners are no longer visible on green runs — only on failure. This reverses the earlier preference for always-on forensic detail in favor of scan-ability and color density. Failures still show the captured `t.Logf` output, so diagnosability is preserved. Switching back to `--format standard-verbose` is a one-word Makefile change if always-on banners are wanted again.
 
 ### Decision: Route subprocess banners through `t.Logf` in `runIn()`
 **Why:** This is what makes "headings vs body" actually work. Capturing each subprocess's combined output and emitting it via `t.Logf` (instead of `os.Stdout`) means:
@@ -53,7 +53,7 @@ Implementation shape: `runIn()` switches from `cmd.Stdout = os.Stdout; cmd.Stder
 ## Risks / Trade-offs
 
 - **gotestsum not installed outside Nix shell** → fallback recipe runs plain `go test`; documented in the Makefile recipe.
-- **standard-verbose stays long on green** → accepted per user preference; trivially switchable later.
+- **testname hides banners on green** → accepted; detail still surfaces on failure, trivially switchable back to `standard-verbose`.
 - **Banners logged post-completion, not streamed** → negligible for short helper commands; gains correct nesting.
 - **CI color/TTY** → gotestsum auto-detects non-TTY and degrades to plain text; no special handling needed.
 

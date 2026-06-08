@@ -7,6 +7,12 @@
 - **`make clean-tests`** — sweep leaked integration-test debris
   - kills `jjay-test-*` tmux sessions and removes `/tmp/jjay-test-*` + `/tmp/jjay-merge-test-*`; `test-integration` runs it first. Real `jjay->` sessions are never touched. See [proposal](openspec/changes/archive/2026-06-05-add-clean-tests-target/proposal.md).
 
+### Changed
+
+- **`make test-integration` output is now readable** — gotestsum + nested banners
+  - formats via `gotestsum --no-color=false --format testname` for colored per-test PASS/FAIL lines and a `DONE N tests in Xs` summary; falls back to plain `go test` when gotestsum is absent. `gotestsum` added to the Nix devShell.
+  - `runIn()` now captures each subprocess's combined output and emits it via `t.Logf`, so jj/OpenSpec banners nest under the scenario that produced them (and surface on failure) instead of streaming free-floating to stdout. See [proposal](openspec/changes/archive/2026-06-08-make-integration-output-readable/proposal.md), [ADR-012](openspec/changes/archive/2026-06-08-make-integration-output-readable/adrs/012-gotestsum-for-integration-output.md).
+
 ### Fixed
 
 - **`jjay merge` now verifies the work landed (no more stale errors)**

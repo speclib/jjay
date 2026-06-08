@@ -1,5 +1,5 @@
 ### Requirement: Makefile with dev targets
-The project SHALL have a Makefile with `build`, `test`, `lint`, `coverage`, `badge`, and `clean-tests` targets.
+The project SHALL have a Makefile with `build`, `test`, `lint`, `coverage`, `badge`, `test-spawn`, `test-integration`, and `clean-tests` targets. The `test-integration` target SHALL format its output with `gotestsum` when available, using a verbose format so subprocess detail remains visible, and SHALL fall back to plain `go test` when `gotestsum` is not installed.
 
 #### Scenario: Build target
 - **WHEN** `make build` is executed
@@ -28,6 +28,17 @@ The project SHALL have a Makefile with `build`, `test`, `lint`, `coverage`, `bad
 - **THEN** every tmux session whose name matches `jjay-test-*` is killed
 - **THEN** temp directories `/tmp/jjay-test-*` and `/tmp/jjay-merge-test-*` are removed
 - **THEN** real spawn sessions (named `jjay-><dirname>`) are NOT affected
+
+#### Scenario: Integration target uses the formatter
+- **WHEN** `make test-integration` is executed and `gotestsum` is on `PATH`
+- **THEN** the integration suite runs under `gotestsum` with a verbose format
+- **THEN** each scenario reports a colored PASS/FAIL line
+- **THEN** a run summary reporting the test count and total duration is printed
+
+#### Scenario: Integration target fallback
+- **WHEN** `make test-integration` is executed and `gotestsum` is NOT on `PATH`
+- **THEN** the integration suite still runs via `go test -tags integration ./...`
+- **THEN** the run reports pass/fail results without erroring on the missing formatter
 
 ### Requirement: Test file convention
 Tests SHALL be placed alongside source files using Go's `*_test.go` convention in the same package. Integration tests SHALL be placed in `test/integration/` with a `//go:build integration` tag.
@@ -73,3 +84,20 @@ A `testdata/fake-agent.sh` script SHALL accept arguments, create a marker file i
 - **WHEN** the fake agent is launched in a workspace directory
 - **THEN** it creates `agent-was-here.txt` in that directory
 - **THEN** it exits with code 0
+
+### Requirement: Readable integration test output
+The integration test suite SHALL produce output in which each scenario is visually distinguished by a heading line, subprocess detail (jj, OpenSpec, tmux) is nested beneath the scenario it belongs to rather than streamed as free-floating text, and a run summary with pass/fail counts and total duration is emitted. Per-scenario results SHALL be colorized when the formatter and terminal support color.
+
+#### Scenario: Subprocess output is attributed to its scenario
+- **WHEN** an integration test helper shells out to `jj`, `openspec`, or `tmux`
+- **THEN** that subprocess's combined stdout/stderr is emitted through the test logger
+- **THEN** the captured output appears under the heading of the test (or subtest) that invoked it, not as unattributed lines in the terminal
+
+#### Scenario: Run summary is present
+- **WHEN** the integration suite finishes under the formatter
+- **THEN** a summary line reporting the number of tests run and the total elapsed time is printed at the end of the run
+
+#### Scenario: Failures remain diagnosable
+- **WHEN** an integration scenario fails
+- **THEN** the failing scenario is clearly marked (colored FAIL where supported)
+- **THEN** the subprocess detail captured for that scenario is visible in the output

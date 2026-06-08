@@ -6,7 +6,7 @@ Bean: [jjay-7rol](../../../.beans/jjay-7rol--make-test-integration-output-more-r
 
 ## What Changes
 
-- Adopt **gotestsum** as the integration-test output formatter. The `test-integration` Makefile target pipes through `gotestsum --format standard-verbose -- -tags integration ./...`, gaining per-scenario PASS/FAIL lines with **color** and a `DONE N tests in Xs` **stats** footer. `standard-verbose` is chosen deliberately so subprocess banners remain visible on every run (not only on failure).
+- Adopt **gotestsum** as the integration-test output formatter. The `test-integration` Makefile target pipes through `gotestsum --no-color=false --format testname -- -tags integration ./...`, gaining a colored per-test PASS/FAIL line with **color** and a `DONE N tests in Xs` **stats** footer. `testname` is chosen for high color density and scan-ability; subprocess banners are folded away on passing tests and surfaced only on failure (where the captured detail is needed). `--no-color=false` is required because gotestsum 1.13.0 defaults color off.
 - Add `gotestsum` to the Nix flake devShell `buildInputs` so it is available in the dev environment.
 - Route subprocess banners through the test logger: `runIn()` in `test/integration/helpers_test.go` captures each subprocess's combined stdout/stderr and emits it via `t.Logf` instead of streaming raw to `os.Stdout`. This makes jj/OpenSpec output **nest under the correct subtest heading** (the "clean headings vs body" fix) rather than floating free.
 - Preserve a **graceful fallback**: plain `go test -tags integration ./...` (no gotestsum) MUST still run and report correctly, so the suite is not hard-coupled to the formatter being installed.

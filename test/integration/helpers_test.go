@@ -179,10 +179,15 @@ func runIn(t *testing.T, dir string, name string, args ...string) {
 	t.Helper()
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("%s %v failed in %s: %v", name, args, dir, err)
+	// Capture combined output and emit it via t.Logf so it nests under the
+	// invoking test/subtest (entering the go test -json event stream) instead
+	// of streaming raw to os.Stdout as free-floating banners.
+	out, err := cmd.CombinedOutput()
+	if len(out) > 0 {
+		t.Logf("%s %v:\n%s", name, args, out)
+	}
+	if err != nil {
+		t.Fatalf("%s %v failed in %s: %v\n%s", name, args, dir, err, out)
 	}
 }
 
