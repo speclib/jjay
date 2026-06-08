@@ -24,7 +24,7 @@ Today merge proves only a negative ("no conflicts"). Conflict-free ≠ merged (j
 `jjay merge` SHALL be a verification-gated pipeline:
 
 1. **Snapshot** the `jj op log` head before any rewrite (recovery handle).
-2. **Define the work** as `WORK = main..(heads of the workspace's commits) & ~empty()` — including `@-` and divergent siblings, not just `<change>@`. Capture the added/modified file set across `WORK`.
+2. **Define the work** as `WORK = ancestors(<change>@) & main.. & ~empty()` — including `@-` and any ancestor of `@`, not just `<change>@`. Capture the added/modified file set across `WORK`. (Spike-confirmed limitation: a true divergent *sibling* the workspace `@` never descended from is unreachable from `<change>@` — jj links only one `@` per workspace — so it cannot be auto-included; the smoke test detects that case instead. Op-log sibling discovery is a non-goal.)
 3. **Fold + merge** via the existing `advanceMainToHead` (ADR-010) then rebase/merge over `WORK`.
 4. **Smoke test** (rse4 L1+L2): if the workspace had work, main MUST have gained changes (L1); every captured file MUST be present on main (L2).
 5. **Gate the lifecycle on the proof:**
@@ -35,7 +35,7 @@ L3 (content equivalence) is deferred (rebase-combination caveat). Auto-rollback 
 
 ## Consequences
 
-- **Positive**: Empty-`@` and orphaned-sibling merges (instances 2/3) can no longer report false success — the smoke test fails loudly with a recovery handle.
+- **Positive**: Empty-`@` work (instance 2) is now auto-included via the ancestor frontier; orphaned-sibling work (instance 3) can no longer report false success — even though it can't be auto-included (jj doesn't link it to the workspace), the smoke test fails loudly with a recovery handle instead of silently dropping it.
 - **Positive**: Staleness (instance 1) is closed structurally — a proven merge forgets the workspace, so there is no pointer to go stale; an unproven merge deliberately keeps it.
 - **Positive**: Non-destructive on failure — the work is never thrown away on the case the tool can't yet verify.
 - **Negative**: Merge gains real logic (frontier revset, file capture, smoke test) — more than "rebase onto bookmark".

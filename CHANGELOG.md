@@ -7,6 +7,11 @@
 - **`make clean-tests`** — sweep leaked integration-test debris
   - kills `jjay-test-*` tmux sessions and removes `/tmp/jjay-test-*` + `/tmp/jjay-merge-test-*`; `test-integration` runs it first. Real `jjay->` sessions are never touched. See [proposal](openspec/changes/archive/2026-06-05-add-clean-tests-target/proposal.md).
 
+### Fixed
+
+- **`jjay merge` now verifies the work landed (no more stale errors)**
+  - merge folds work from the `@-` ancestor frontier (not just `<change>@`), runs a post-merge smoke test (work-frontier files must be on main), and forgets the workspace on success so no stale pointer remains. On an unproven merge it keeps the workspace and prints `jj op restore <id>` instead of reporting false success. A truly orphaned sibling commit remains undetectable (tracked in jjay-ychu). See ADR-013.
+
 ## 0.3.0 - 2026-06-05
 
 ### Added

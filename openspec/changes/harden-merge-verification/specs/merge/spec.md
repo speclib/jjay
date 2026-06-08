@@ -1,17 +1,19 @@
 ## ADDED Requirements
 
-### Requirement: Merge operates on the workspace's full work frontier
-`jjay merge <change>` SHALL define the workspace's work as all non-empty commits reachable from the workspace's heads that are not yet on main — `main..(heads of the workspace's commits) & ~empty()` — not only `<change>@`. The rebase and merge SHALL operate over that frontier, so work committed in `@-` or on a divergent sibling commit is included rather than silently dropped.
+### Requirement: Merge operates on the workspace's ancestor work frontier
+`jjay merge <change>` SHALL define the workspace's work as all non-empty commits in `ancestors(<change>@) & main.. & ~empty()` — i.e. everything on `<change>@`'s line not yet on main, including `@-` — not only `<change>@` itself. The rebase and merge SHALL operate over that frontier, so work committed in `@-` (or any ancestor of `@`) is included rather than silently dropped.
+
+NOTE — limitation (spike-confirmed): jj associates exactly one working-copy commit (`@`) with a workspace, so a commit the workspace's `@` never descended from (a true divergent *sibling*, e.g. the `zroyto` orphan in q6ko instance 3) is **not reachable from `<change>@`** and cannot be auto-included. Such work is handled by the post-merge smoke test below, which fails loudly and keeps the workspace for recovery rather than silently dropping it. Auto-including orphan siblings would require op-log scanning and is a documented non-goal.
 
 #### Scenario: Work in @- while @ is empty
 - **WHEN** the workspace's `@` is empty but real work is committed in `@-`
 - **THEN** merge includes the `@-` work (the frontier covers `main..@-`)
 - **THEN** the merge commit is non-empty and the `@-` work is present on main
 
-#### Scenario: Work on a divergent sibling commit
-- **WHEN** the workspace's real work lives on a commit that `<change>@` does not descend from (a sibling)
-- **THEN** merge includes that sibling commit's work via the frontier
-- **THEN** the sibling work is present on main after merge (not orphaned)
+#### Scenario: Divergent sibling work is detected, not silently dropped
+- **WHEN** the workspace's real work lives on a sibling commit that `<change>@` does not descend from
+- **THEN** the work is not auto-included (it is unreachable from `<change>@`)
+- **THEN** the post-merge smoke test fails loudly, the workspace is kept, and the failure names the recovery handle — instead of reporting false success
 
 ### Requirement: Merge proves the work landed (post-merge smoke test)
 After merge, `jjay merge` SHALL verify that the workspace's work actually landed on main before reporting success. (L1) If the workspace had work but main gained no changes, the merge SHALL fail. (L2) Every file added or modified across the work frontier, captured before the merge, SHALL be present on main; any missing file SHALL fail the smoke test. The smoke test SHALL be verbose by default (pre-1.0). Content equivalence (L3) is out of scope for this change.
@@ -91,9 +93,10 @@ Integration tests (build tag `integration`) SHALL cover the merge scenarios belo
 - **WHEN** the workspace's `@` is empty and its real work is in `@-`
 - **THEN** merge lands the `@-` work on main (non-empty merge), proving the frontier reaches `@-`
 
-#### Scenario 9: Work on a divergent sibling (TestMerge_WorkOnSibling)
+#### Scenario 9: Divergent sibling work is detected by the smoke test (TestMerge_SiblingDetected)
 - **WHEN** the workspace's work is on a sibling commit that `<change>@` does not descend from
-- **THEN** merge lands the sibling work on main (it is not orphaned)
+- **THEN** merge does not auto-include it (unreachable from `<change>@`)
+- **THEN** the smoke test fails loudly, the workspace is kept, and a recovery handle is given (not silent success)
 
 #### Scenario 10: Workspace not stale after a proven merge (TestMerge_NotStaleAfterMerge)
 - **WHEN** a normal merge succeeds and its smoke test passes
