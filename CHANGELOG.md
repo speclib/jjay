@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- **`make clean-tests`** — sweep leaked integration-test debris
+  - kills `jjay-test-*` tmux sessions and removes `/tmp/jjay-test-*` + `/tmp/jjay-merge-test-*`; `test-integration` runs it first. Real `jjay->` sessions are never touched. See [proposal](openspec/changes/archive/2026-06-05-add-clean-tests-target/proposal.md).
+
 ## 0.3.0 - 2026-06-05
 
 ### Added
