@@ -1,11 +1,11 @@
 ---
 # jjay-rse4
 title: 'post-merge smoke test: prove the merge actually landed (changed-file + content check)'
-status: draft
+status: scrapped
 type: task
 priority: high
 created_at: 2026-06-05T10:01:37Z
-updated_at: 2026-06-05T11:59:59Z
+updated_at: 2026-06-05T11:59:03Z
 parent: jjay-hjjg
 ---
 
@@ -47,3 +47,7 @@ A concrete case (prop-jjay-7rol, logged in q6ko 3rd instance) showed the workspa
 Therefore the BEFORE-merge capture must be the union over all the workspace's relevant commits, e.g. files touched in `main..(all heads reachable in the workspace)` — including divergent/sibling commits — not just `base..<change>@`. The smoke test's whole value is catching exactly the work the merge's <change>@ revset fails to follow; if it uses the same revset, it inherits the same blindness.
 
 This also sharpens the failure message: 'workspace history touches openspec/changes/X and Y; main gained neither' is the signal that makes an orphaned-sibling proposal obvious.
+
+## Reasons for Scrapping
+
+Folded into the `harden-merge-verification` proposal (epic jjay-q6ko), which absorbs this smoke test (L1+L2, pre-merge op snapshot, work-frontier capture over all workspace heads including siblings, loud non-destructive failure) as the verification gate for the whole merge fix. Keeping it separate would split one mechanism — "prove the work landed, then decide the workspace's fate" — across two proposals. L3 content equivalence is carried forward as the documented follow-up in that proposal's design. See `openspec/changes/harden-merge-verification/`.
