@@ -1,11 +1,11 @@
 ---
 # jjay-q6ko
 title: merging now almost always give a stale error
-status: todo
+status: in-progress
 type: bug
 priority: critical
 created_at: 2026-06-04T22:23:50Z
-updated_at: 2026-06-05T11:56:13Z
+updated_at: 2026-06-05T11:58:43Z
 parent: jjay-hjjg
 ---
 
