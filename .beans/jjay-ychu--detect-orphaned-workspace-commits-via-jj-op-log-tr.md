@@ -5,7 +5,7 @@ status: draft
 type: task
 priority: normal
 created_at: 2026-06-08T15:54:55Z
-updated_at: 2026-06-08T15:54:55Z
+updated_at: 2026-06-12T13:49:55Z
 parent: jjay-hjjg
 ---
 
@@ -32,3 +32,11 @@ Scan `jj op log` for commits CREATED while `@` was in this workspace's directory
 Given a spawned workspace whose work is on a sibling `@` never descended from, `jjay merge` (or a doctor/verify step) detects the orphaned commit and warns with a recovery handle — instead of a silent empty merge.
 
 Relationships: extends jjay-q6ko / ADR-013 (harden-merge-verification). Sibling of the smoke-test mechanism. Possibly belongs with a future `jjay doctor` (jjay-wsuv).
+
+
+
+## Update (2026-06-12): detection satisfied by snapshot-frontier-before-merge (ADR-015)
+
+The proposal snapshot-frontier-before-merge closes jjay-4oyy AND satisfies THIS bean's *acceptance* — 'detects the orphaned commit and warns instead of a silent empty merge' — via Tier 2 'empty frontier ⇒ unproven': merge now refuses to report 'verified' on an empty frontier, keeps the workspace, and warns with a recovery handle. So the pure orphan is no longer a silent empty merge.
+
+Remaining scope for THIS bean (still deferred): Tier 3 — op-log forensics to IDENTIFY and NAME the orphan sibling commit (`@` never visited, no on-disk trace). Spike confirmed: a pure orphan leaves nothing in the frontier OR on disk, so only op-log can name it. Keep open as the deferred 'name the orphan' work; reopen if Tier 2's refuse-and-warn proves insufficient in practice.

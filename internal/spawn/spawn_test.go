@@ -2,10 +2,31 @@ package spawn
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"jjay/internal/workspace"
 )
+
+// TestLaunchResumeDiverge is the core ADR-014 invariant: the launch command runs
+// the work (/opsx:apply), the resume command does NOT — it resumes the agent.
+func TestLaunchResumeDiverge(t *testing.T) {
+	launch := resolveLaunch()
+	resume := resolveResume()
+
+	if !strings.Contains(launch, "/opsx:apply") {
+		t.Errorf("launch should run /opsx:apply, got %q", launch)
+	}
+	if strings.Contains(resume, "/opsx:apply") {
+		t.Errorf("resume MUST NOT re-run /opsx:apply, got %q", resume)
+	}
+	if !strings.Contains(resume, "--resume") {
+		t.Errorf("default resume should use --resume, got %q", resume)
+	}
+	if launch == resume {
+		t.Error("launch and resume must diverge on the command (ADR-014)")
+	}
+}
 
 func TestCheckTmuxSession_InsideTmux(t *testing.T) {
 	original := os.Getenv("TMUX")

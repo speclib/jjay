@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-06-05T00:40:03Z
-updated_at: 2026-06-05T10:05:53Z
+updated_at: 2026-06-12T14:04:09Z
 parent: jjay-hjjg
 blocked_by:
     - jjay-gwpc
@@ -30,3 +30,7 @@ release.sh currently: safety checks → prompt version → update VERSION → up
 - Depends on / coordinates with jjay-gwpc (make coverage including integration) — decide the coverage command there, then call it here.
 
 Found while prepping a release: tests/coverage/badge are all manual today; easy to forget and ship a stale badge or untested code.
+
+
+
+Note (2026-06-12): coverage-includes-integration (jjay-gwpc) shipped `make coverage` = integration + whole-repo `-coverpkg`, and `make badge` patches the README. When implementing this bean, the release gate should call `make coverage` (not the old unit-only) and `make badge`, folding the refreshed badge into the release commit. `make coverage-unit` exists for tmux/jj-free CI.

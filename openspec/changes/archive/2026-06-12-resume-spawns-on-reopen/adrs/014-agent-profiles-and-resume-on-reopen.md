@@ -1,6 +1,6 @@
 # ADR-014: Agent profiles + 3-layer config — resume on reopen, not re-apply
 
-**Status**: Proposed
+**Status**: Accepted
 
 **Supersedes**: ADR-006 (Configuration via CLI flags, not config file) for the agent-command surface.
 

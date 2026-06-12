@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -117,6 +118,15 @@ func TestInit_BareProject(t *testing.T) {
 	mustExist(t, filepath.Join(target, ".claude", "commands", "jjay", "spawn.md"))
 	mustExist(t, filepath.Join(target, ".claude", "skills", "jjay", "SKILL.md"))
 	mustExist(t, filepath.Join(target, "AGENTS.md"))
+	// jjay config is seeded from the built-in (ADR-014), carrying launch+resume.
+	cfg := filepath.Join(target, ".jjay", "config.yaml")
+	mustExist(t, cfg)
+	data, _ := os.ReadFile(cfg)
+	for _, want := range []string{"agents:", "claude:", "launch:", "resume:", "--resume"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf(".jjay/config.yaml missing %q; got:\n%s", want, data)
+		}
+	}
 	// jj and hooks are opt-in: not present without their flags.
 	mustNotExist(t, filepath.Join(target, ".jjay", "hooks.example.sh"))
 }

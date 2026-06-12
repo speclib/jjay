@@ -1,12 +1,13 @@
 ---
 # jjay-tzl3
 title: session-open should not run claude /opsx:apply
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-06-08T11:50:15Z
-updated_at: 2026-06-08T11:54:13Z
-parent: jjay-ykyx
+updated_at: 2026-06-12T14:00:00Z
+parent: jjay-hjjg
+openspec-link: openspec/changes/archive/2026-06-12-resume-spawns-on-reopen
 ---
 
 

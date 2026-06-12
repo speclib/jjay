@@ -46,14 +46,14 @@ agents:
 - **Code**:
   - New `internal/config` package: types `{Agents map[string]AgentProfile}`, `AgentProfile{Launch, Resume}`, a per-field 3-layer resolver, and the Go built-in default (the current `DefaultAgentCommand` becomes the built-in `claude.launch`).
   - `internal/spawn/spawn.go`: `OpenWindow`/`openWindow`/`setupPanes` gain an intent; the "cannot diverge" comment is inverted. `Spawn`/`SpawnProposal` resolve via config (built-in still wins for tests via `--agent`).
-  - `internal/session/session.go`: `reopenDetached` delegates to the new single-workspace reopen primitive (resume intent).
+  - `internal/session/session.go`: `reopenDetached` delegates to the new single-workspace reopen primitive (resume intent). **Also bundles two session-open bug fixes surfaced during implementation:** `SessionName` sanitizes `.`/`:` → `_` for tmux target syntax ([jjay-e3bx](../../.beans/jjay-e3bx--session-open-fails-on-dotscolons-in-repo-dir-name.md)); and reopen is scoped to the **target** repo via `status.ListIn(repoRoot, …)` so `session-open <path>` no longer reopens the caller repo's workspaces into the new session ([jjay-02nr](../../.beans/jjay-02nr--session-open-respawns-tmux-windows-in-wrong-tmux-s.md)).
   - `cmd/jjay/main.go`: new `tmux-open` command (with arg completion over reopenable workspaces).
   - `internal/init`: seed `<repo>/.jjay/config.yaml` from the built-in (idempotent, non-destructive — ADR-008 pattern).
   - Command doc + skill assets under `internal/init/assets/` for `tmux-open` and the updated `session-open` behavior.
 - **Severity**: HIGH — `session-open` currently destroys in-flight agent conversations on every reopen.
 - **Relation**: **supersedes ADR-006** (config-via-flags-not-file) for the agent-command surface — the deferred config file now exists; flags remain valid overrides. Slots a config foundation under backlog tasks [jjay-iex3](../../.beans/jjay-iex3--configuration-dir.md) (global config dir) and [jjay-euup](../../.beans/jjay-euup--settings-in-project-for-spawned-tmux-layout-and-ag.md) (per-project settings), which shift from "build the config mechanism" to "add more fields (tmux layout, panes, agent-to-use)" on top of it.
 - **ADRs**: ADR-014 (agent profiles + 3-layer per-field config; launch≠resume on reopen).
-- **Beans**: jjay-tzl3 → in-progress, linked here.
+- **Beans**: jjay-tzl3 → in-progress, linked here. Bundled fixes: jjay-e3bx (dot/colon session names), jjay-02nr (cross-project reopen leak) → in-progress, linked here.
 - **Bean task ref**: [jjay-tzl3](../../.beans/jjay-tzl3--session-open-should-not-run-claude-opsxapply.md)
 
 ## Deferred / Out of Scope

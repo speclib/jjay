@@ -7,7 +7,7 @@ tags: [jjay, session, tmux]
 
 Create and switch to a dedicated tmux session for a jj repo (reopening a window + agent for each spawned workspace) by running the `jjay` binary.
 
-This is a **thin wrapper** over `jjay session-open`. Do not reimplement the session/reopen logic in this prompt — the binary owns that behavior.
+This is a **thin wrapper** over `jjay session-open`. Do not reimplement the session/reopen logic in this prompt — the binary owns that behavior. Reopened workspaces **resume** their agent (the configured `resume` command, e.g. `claude --resume`) — they do NOT re-run `/opsx:apply` from scratch.
 
 **Input**: Optionally specify a repo path (e.g., `/jjay:session-open ../myproject`).
 

@@ -78,18 +78,43 @@ type Spawn struct {
 // directory's .jj pointer) so resolution is correct even when jjay is run from
 // inside a child workspace.
 func List(session, workspaceRoot string) (spawns []Spawn, mainRoot string, err error) {
-	wsOut, err := exec.Command("jj", "workspace", "list").Output()
+	return ListIn("", session, workspaceRoot)
+}
+
+// ListIn is List scoped to a specific repository. repoRoot anchors BOTH the
+// `jj workspace list` query (via `jj -R <repoRoot>`) and the resolved mainRoot,
+// so it reports the workspaces of THAT repo — not the current working
+// directory's. An empty repoRoot falls back to cwd (the List behavior).
+//
+// This matters for `session-open <path>`: it opens a session for a DIFFERENT
+// repo than the one jjay runs from, and must reopen that repo's workspaces, not
+// the caller's (jjay-… cross-project leak).
+func ListIn(repoRoot, session, workspaceRoot string) (spawns []Spawn, mainRoot string, err error) {
+	args := []string{"workspace", "list"}
+	if repoRoot != "" {
+		args = []string{"-R", repoRoot, "workspace", "list"}
+	}
+	wsOut, err := exec.Command("jj", args...).Output()
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to list jj workspaces: %w", err)
 	}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to get working directory: %w", err)
-	}
-	mainRoot, err = workspace.MainRepoRoot(cwd)
-	if err != nil {
-		return nil, "", err
+	if repoRoot != "" {
+		// Anchor on the given repo. Resolve through MainRepoRoot so a child
+		// workspace path still yields the true main root.
+		mainRoot, err = workspace.MainRepoRoot(repoRoot)
+		if err != nil {
+			return nil, "", err
+		}
+	} else {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to get working directory: %w", err)
+		}
+		mainRoot, err = workspace.MainRepoRoot(cwd)
+		if err != nil {
+			return nil, "", err
+		}
 	}
 
 	windows := listWindows(session)

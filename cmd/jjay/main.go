@@ -151,6 +151,22 @@ var statusCmd = &cobra.Command{
 }
 
 var (
+	tmuxOpenSession       string
+	tmuxOpenWorkspaceRoot string
+)
+var tmuxOpenCmd = &cobra.Command{
+	Use:   "tmux-open <workspace>",
+	Short: "Reopen one spawned workspace's tmux window (resumes the agent)",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return spawn.TmuxOpen(args[0], spawn.SpawnOptions{
+			Session:       tmuxOpenSession,
+			WorkspaceRoot: tmuxOpenWorkspaceRoot,
+		})
+	},
+}
+
+var (
 	cleanupSession       string
 	cleanupWorkspaceRoot string
 )
@@ -175,6 +191,7 @@ func init() {
 	rootCmd.AddCommand(mergeCmd)
 	rootCmd.AddCommand(cleanupCmd)
 	rootCmd.AddCommand(sessionOpenCmd)
+	rootCmd.AddCommand(tmuxOpenCmd)
 	rootCmd.AddCommand(statusCmd)
 
 	// Per-verb change-name completion. This is the only place that knows the
@@ -189,6 +206,8 @@ func init() {
 	}
 	mergeCmd.ValidArgsFunction = completion.Mergeable
 	cleanupCmd.ValidArgsFunction = completion.Cleanable
+	// tmux-open reopens an existing spawned workspace; offer existing workspaces.
+	tmuxOpenCmd.ValidArgsFunction = completion.Cleanable
 
 	initCmd.Flags().BoolVar(&initYes, "yes", false, "accept creation defaults without prompting (does not authorize overwriting existing files)")
 	initCmd.Flags().BoolVar(&initForce, "force", false, "overwrite existing files")
@@ -208,6 +227,9 @@ func init() {
 
 	cleanupCmd.Flags().StringVar(&cleanupSession, "session", "", "tmux session to target (default: current)")
 	cleanupCmd.Flags().StringVar(&cleanupWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")
+
+	tmuxOpenCmd.Flags().StringVar(&tmuxOpenSession, "session", "", "tmux session to target (default: current)")
+	tmuxOpenCmd.Flags().StringVar(&tmuxOpenWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")
 
 	statusCmd.Flags().StringVar(&statusSession, "session", "", "tmux session to inspect (default: current)")
 	statusCmd.Flags().StringVar(&statusWorkspaceRoot, "workspace-root", "", "workspace root directory (default: ../<project>-workspaces)")

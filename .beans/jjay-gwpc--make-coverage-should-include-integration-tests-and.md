@@ -1,12 +1,13 @@
 ---
 # jjay-gwpc
 title: make coverage should include integration tests (and clarify badge vs coverage)
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-06-05T00:39:22Z
-updated_at: 2026-06-12T12:21:58Z
+updated_at: 2026-06-12T17:00:00Z
 parent: jjay-hjjg
+openspec-link: openspec/changes/archive/2026-06-12-coverage-includes-integration
 ---
 
 initial bean was: jjay-7rol

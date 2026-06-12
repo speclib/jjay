@@ -1,11 +1,11 @@
 ---
 # jjay-4oyy
 title: merge smoke test misses UNCOMMITTED workspace work (empty frontier = false pass)
-status: todo
+status: in-progress
 type: bug
 priority: high
 created_at: 2026-06-12T12:26:16Z
-updated_at: 2026-06-12T12:26:16Z
+updated_at: 2026-06-12T16:00:00Z
 parent: jjay-hjjg
 ---
 

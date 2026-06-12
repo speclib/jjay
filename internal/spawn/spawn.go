@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"jjay/internal/config"
 	"jjay/internal/openspec"
 	"jjay/internal/workspace"
 )
@@ -21,10 +22,20 @@ const (
 
 // SpawnOptions holds configurable parameters for Spawn.
 type SpawnOptions struct {
-	Agent         string // agent command template (with {change}/{prompt} and {wsdir} placeholders)
+	Agent         string // agent command override (highest priority; with {change}/{prompt}/{wsdir} placeholders)
 	Session       string // tmux session name (empty = current)
 	WorkspaceRoot string // override workspace root (empty = default)
 }
+
+// Intent distinguishes a first spawn (launch the work) from a reopen (resume the
+// agent without re-running the work). Launch and reopen share window/pane setup
+// but diverge on which command string is sent (ADR-014).
+type Intent int
+
+const (
+	IntentLaunch Intent = iota // first spawn → profile.Launch
+	IntentResume               // reopen → profile.Resume (do not re-run /opsx:apply)
+)
 
 // Spawn creates a jj workspace, tmux window, and launches an agent for an
 // existing openspec change. The workspace/window is named `app-<change>`.
@@ -39,7 +50,7 @@ func Spawn(changeName string, opts SpawnOptions) error {
 	name := ApplyPrefix + changeName
 	agentTemplate := opts.Agent
 	if agentTemplate == "" {
-		agentTemplate = DefaultAgentCommand
+		agentTemplate = resolveLaunch()
 	}
 	if err := isolateAndLaunch(name, changeName, agentTemplate, opts); err != nil {
 		return err
@@ -265,15 +276,90 @@ func createWorkspace(name, wsDir string) error {
 // through openWindow so they cannot diverge.
 //
 // It does not create or check the jj workspace — the caller owns that.
-func OpenWindow(name, wsDir string, opts SpawnOptions) error {
+// Reopen recreates the tmux window + panes for one already-existing spawned
+// workspace and launches the agent's RESUME command (not launch — it must not
+// re-run /opsx:apply). It does not create or touch the jj workspace. This is the
+// single reopen primitive: `tmux-open` calls it for one workspace, and
+// session-open loops it over every detached spawn (ADR-014).
+func Reopen(name, wsDir string, opts SpawnOptions) error {
+	return OpenWindow(name, wsDir, opts, IntentResume)
+}
+
+// TmuxOpen is the `jjay tmux-open <workspace>` entry point: it reopens one
+// existing spawned workspace's window via the resume intent. It verifies the
+// workspace exists (and is not already attached) and resolves its directory,
+// then calls Reopen. It does not create or modify the jj workspace.
+func TmuxOpen(name string, opts SpawnOptions) error {
+	exists, err := workspaceExists(name)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("jj workspace %q does not exist", name)
+	}
+	if attached, err := windowExists(name, opts.Session); err != nil {
+		return err
+	} else if attached {
+		return fmt.Errorf("workspace %q already has a tmux window (nothing to reopen)", name)
+	}
+	wsDir, err := workspace.WorkspaceDir(name, opts.WorkspaceRoot)
+	if err != nil {
+		return err
+	}
+	return Reopen(name, wsDir, opts)
+}
+
+// workspaceExists reports whether a jj workspace named `name` is registered.
+func workspaceExists(name string) (bool, error) {
+	out, err := exec.Command("jj", "workspace", "list").Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to list jj workspaces: %w", err)
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) > 0 && fields[0] == name+":" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// windowExists reports whether a `ws-<name>` tmux window exists in the session.
+func windowExists(name, session string) (bool, error) {
+	wn := workspace.WindowName(name)
+	args := []string{"list-windows", "-F", "#{window_name}"}
+	if session != "" {
+		args = append(args, "-t", session)
+	}
+	out, err := exec.Command("tmux", args...).Output()
+	if err != nil {
+		// No tmux server / no session ⇒ no window.
+		return false, nil
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == wn {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func OpenWindow(name, wsDir string, opts SpawnOptions, intent Intent) error {
 	agentTemplate := opts.Agent
 	if agentTemplate == "" {
-		agentTemplate = DefaultAgentCommand
+		// Launch and reopen share window/pane setup but MUST diverge on the
+		// command (ADR-014): a first spawn launches the work; a reopen resumes
+		// the agent and must NOT re-run /opsx:apply from scratch.
+		if intent == IntentResume {
+			agentTemplate = resolveResume()
+		} else {
+			agentTemplate = resolveLaunch()
+		}
 	}
-	// session-open reopens by workspace name; the apply template's {change}
-	// placeholder is the change embedded in the `app-` name. For proposal
-	// spawns the seed prompt is gone, but the window/pane layout still reopens;
-	// the agent template falls back to the name as the seed.
+	// Reopen by workspace name; the apply template's {change} placeholder is the
+	// change embedded in the `app-` name. For proposal spawns the seed prompt is
+	// gone, but resume does not need it (the resume command is conversation-based,
+	// not seed-based); the name-derived seed is harmless if a template uses it.
 	seed := strings.TrimPrefix(name, ApplyPrefix)
 	return openWindow(name, seed, wsDir, agentTemplate, opts)
 }
@@ -301,8 +387,45 @@ func createWindow(name, session, wsDir string) error {
 	return nil
 }
 
-// DefaultAgentCommand is the default apply-flow agent command template.
+// DefaultAgentCommand is the default apply-flow launch command. It mirrors the
+// config built-in (config.Builtin()["claude"].Launch) and is kept as a const for
+// callers/tests that need the literal; runtime resolution goes through
+// resolveLaunch so project/global config can override it (ADR-014).
 const DefaultAgentCommand = `claude "/opsx:apply {change}" --dangerously-skip-permissions --add-dir {wsdir}`
+
+// resolveLaunch / resolveResume resolve the claude agent's launch/resume command
+// templates from jjay config (project → global → built-in), located from the
+// main repo root. On any resolution error they fall back to the built-in so
+// spawning/reopening never breaks on a malformed or unreadable config.
+func resolveLaunch() string {
+	p := resolveProfile()
+	if p.Launch != "" {
+		return p.Launch
+	}
+	return DefaultAgentCommand
+}
+
+func resolveResume() string {
+	p := resolveProfile()
+	if p.Resume != "" {
+		return p.Resume
+	}
+	return config.Builtin().Agents[config.DefaultAgent].Resume
+}
+
+func resolveProfile() config.AgentProfile {
+	root := ""
+	if cwd, err := os.Getwd(); err == nil {
+		if r, err := workspace.MainRepoRoot(cwd); err == nil {
+			root = r
+		}
+	}
+	p, err := config.Resolve(config.DefaultAgent, root)
+	if err != nil {
+		return config.Builtin().Agents[config.DefaultAgent]
+	}
+	return p
+}
 
 // proposalExploreCommand / proposalProposeCommand are the proposal-flow agent
 // templates. The {prompt} placeholder is the free-text seed; {wsdir} points the

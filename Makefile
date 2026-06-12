@@ -1,6 +1,6 @@
 VERSION := $(shell cat VERSION)
 
-.PHONY: build test test-spawn test-integration lint coverage badge clean-tests
+.PHONY: build test test-spawn test-integration lint coverage coverage-unit badge clean-tests
 
 build:
 	go build -ldflags "-X main.version=$(VERSION)" -o jjay ./cmd/jjay
@@ -25,8 +25,22 @@ clean-tests:
 lint:
 	go vet ./...
 
-coverage:
-	go test -coverprofile=coverage.out ./...
+# coverage runs the WHOLE suite including integration tests, with -coverpkg=./...
+# so coverage is attributed across every package regardless of which test package
+# exercised it (test/integration drives internal/spawn, internal/cleanup, etc.
+# in-process; without -coverpkg those don't count). Requires tmux + jj on PATH
+# (it runs the integration suite) and sweeps test debris first via clean-tests.
+# Plain `go test` (not gotestsum) so -coverprofile stays simple.
+coverage: clean-tests
+	go test -tags integration -coverpkg=./... -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage: $$(go tool cover -func=coverage.out | grep total | awk '{print $$NF}')"
+
+# coverage-unit is the tmux/jj-free fallback (bare CI): same whole-repo -coverpkg
+# attribution but WITHOUT -tags integration, so integration-only coverage is
+# simply absent and no tmux/jj is required.
+coverage-unit:
+	go test -coverpkg=./... -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage: $$(go tool cover -func=coverage.out | grep total | awk '{print $$NF}')"
 

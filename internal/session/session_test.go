@@ -19,6 +19,11 @@ func TestSessionName(t *testing.T) {
 		{"/home/user/projects/myapp", "jjay->myapp"},
 		{"/tmp/foo", "jjay->foo"},
 		{"relative-dir", "jjay->relative-dir"},
+		// tmux reserves `.` and `:` in target names → normalize to `_` so
+		// creation and targeting agree (the mip.rs bug).
+		{"/home/user/cLinden/mip.rs", "jjay->mip_rs"},
+		{"/home/user/cLinden/mip.rs/", "jjay->mip_rs"},
+		{"weird:name", "jjay->weird_name"},
 	}
 
 	for _, tt := range tests {

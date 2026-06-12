@@ -6,6 +6,24 @@
 
 - **`make clean-tests`** — sweep leaked integration-test debris
   - kills `jjay-test-*` tmux sessions and removes `/tmp/jjay-test-*` + `/tmp/jjay-merge-test-*`; `test-integration` runs it first. Real `jjay->` sessions are never touched. See [proposal](openspec/changes/archive/2026-06-05-add-clean-tests-target/proposal.md).
+- **`jjay tmux-open <workspace>`** — reopen one workspace, resuming its agent
+  - recreates the window in the workspace dir and runs the agent's `resume` command; `session-open` loops this same primitive. See [proposal](openspec/changes/archive/2026-06-12-resume-spawns-on-reopen/proposal.md), [ADR-014](openspec/changes/archive/2026-06-12-resume-spawns-on-reopen/adrs/014-agent-profiles-and-resume-on-reopen.md).
+- **jjay config file** — per-agent `launch`/`resume` command templates
+  - `<repo>/.jjay/config.yaml` + `~/.config/jjay/config.yaml`, resolved per field (project → global → built-in), distinct from `openspec/config.yaml`; seeded by `jjay init`. Supersedes ADR-006's no-config-file decision.
+
+### Changed
+
+- **`make coverage` now measures real coverage (integration + whole repo)**
+  - runs `-tags integration -coverpkg=./...` so integration-exercised packages count (merge/spawn were phantom ~5%, now ~75% total); depends on `clean-tests`. New `coverage-unit` is the tmux/jj-free fallback; `make badge` (not `coverage`) patches the README. See [proposal](openspec/changes/archive/2026-06-12-coverage-includes-integration/proposal.md).
+- **`session-open` reopens by resuming, not re-running `/opsx:apply`**
+  - reopening a detached spawn now runs the agent's `resume` command (default `claude --resume`) so the in-flight conversation continues instead of starting over. Launch (first spawn) and resume (reopen) diverge on the command, share window/pane setup (ADR-014).
+
+### Fixed
+
+- **`session-open` reopened the wrong repo's workspaces** — scope to target
+  - `session-open <path>` now enumerates the **target** repo's workspaces (`jj -R <path>`), not the directory jjay runs from, so it no longer mixes another project's spawns into the session (jjay-02nr).
+- **`session-open` failed on dots/colons in the repo dir name**
+  - `mip.rs` made tmux parse the session target as `session.pane`; the name is now sanitized (`.`/`:` → `_`) so create and target agree (jjay-e3bx).
 
 ### Changed
 

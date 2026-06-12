@@ -2,7 +2,7 @@
   <img src="artwork/hero.png" alt="jjay — Control the flock. Manage parallel agent sessions with jj, tmux and openspec." />
 </p>
 
-[![Coverage](https://img.shields.io/badge/coverage-53.8%25-red)](coverage.html)
+[![Coverage](https://img.shields.io/badge/coverage-75.7%25-yellow)](coverage.html)
 
 # jjay
 
@@ -59,6 +59,25 @@ tmux kill-window -t "feat/payments"
 ```
 
 jjay will handle all of this with a single command.
+
+## Configuration
+
+jjay has its own config file — `<repo>/.jjay/config.yaml` (project) and
+`~/.config/jjay/config.yaml` (global) — **distinct from `openspec/config.yaml`**.
+It holds per-agent command templates, resolved per field as
+project → global → built-in:
+
+```yaml
+agents:
+  claude:
+    launch: 'claude "/opsx:apply {change}" --dangerously-skip-permissions --add-dir {wsdir}'
+    resume: 'claude --resume --add-dir {wsdir}'
+```
+
+`launch` starts the work on a first spawn; `resume` is run when a workspace is
+reopened (`jjay session-open` / `jjay tmux-open`) so the agent **resumes** its
+conversation instead of re-running `/opsx:apply` from scratch. `jjay init` seeds
+this file from the built-in defaults.
 
 ## Tech stack
 
@@ -264,6 +283,14 @@ The `/jjay:*` commands shell out to the `jjay` binary, so **`jjay` must be on `P
 Contributions are welcome. Fork the repo, create a branch, and open a pull request.
 
 Found a bug or have an idea? [Open an issue](../../issues).
+
+### Testing & coverage
+
+- `make test` — fast unit tests.
+- `make test-integration` — full lifecycle tests (spawn/merge/session); **requires `tmux` and `jj` on `PATH`**.
+- `make coverage` — whole-repo coverage including the integration suite (`-tags integration -coverpkg=./...`), so spawn/merge/cleanup report their real numbers, not ~5%. Also requires `tmux` + `jj`, and sweeps test debris first.
+- `make coverage-unit` — coverage without the integration tag, for environments lacking `tmux`/`jj` (e.g. bare CI).
+- `make badge` — runs `coverage` and patches the README coverage badge. (`coverage` alone only prints the number; **`badge` is what updates the README.**)
 
 ## License
 

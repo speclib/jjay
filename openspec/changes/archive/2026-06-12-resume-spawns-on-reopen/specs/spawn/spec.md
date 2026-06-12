@@ -34,6 +34,22 @@ jjay SHALL provide a `jjay tmux-open <workspace>` command that recreates the tmu
 - **THEN** the failure is logged and the remaining workspaces are still reopened
 - **THEN** `session-open` still succeeds overall
 
+### Requirement: session-open reopens the TARGET repo's workspaces, not the caller's
+`jjay session-open <path>` SHALL enumerate and reopen workspaces of the jj repository at `<path>`, NOT of the directory jjay is invoked from. Workspace enumeration SHALL be scoped to the target repo (e.g. `jj -R <path> workspace list`), and reopened workspace directories SHALL resolve under the target repo's workspace root.
+
+#### Scenario: Cross-project isolation (jjay-02nr)
+- **WHEN** `jjay session-open ~/other/proj` is run from inside the jjay repo, and jjay has a spawn `app-foo` while `~/other/proj` has a spawn `app-bar`
+- **THEN** the new `jjay->proj` session reopens `app-bar` (the target repo's spawn)
+- **THEN** it does NOT reopen `app-foo` (the caller repo's spawn)
+
+### Requirement: tmux session names are sanitized for tmux target syntax
+The tmux session name derived from a repo path SHALL replace characters tmux reserves in target names (`.` and `:`) with `_`, so the name used to create the session and the name used to target it (switch-client, list-windows) agree.
+
+#### Scenario: Dotted repo dir name (jjay-e3bx)
+- **WHEN** `jjay session-open ~/cLinden/mip.rs/` is run
+- **THEN** the session is created and targeted as `jjay->mip_rs` (dot normalized to `_`)
+- **THEN** switching to the session succeeds (no "can't find pane" error)
+
 ## MODIFIED Requirements
 
 ### Requirement: Spawn launches the agent via the resolved launch command

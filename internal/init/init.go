@@ -15,6 +15,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	yaml "go.yaml.in/yaml/v3"
+
+	"jjay/internal/config"
 )
 
 // assets holds the canonical `/jjay:*` command files and the `jjay` skill,
@@ -77,6 +81,7 @@ func Init(path string, opts InitOptions) error {
 	}{
 		{"openspec", stepOpenspec, opts.NoOpenspec},
 		{"claude", stepClaude, opts.NoClaude},
+		{"jjay-config", stepJjayConfig, false},
 		{"agents", stepAgents, opts.NoAgents},
 		{"jj", stepJJ, !opts.WithJJ},
 		{"hooks", stepHooks, !opts.WithHooks},
@@ -234,6 +239,31 @@ func stepClaude(target string, opts InitOptions) error {
 }
 
 // stepAgents writes AGENTS.md documenting the jjay conventions, non-destructively.
+// stepJjayConfig seeds <target>/.jjay/config.yaml from the Go built-in agent
+// profiles — the single source of truth shared with the runtime fallback, so
+// the seeded file and fallback cannot drift (ADR-014). Non-destructive: an
+// existing config is left in place without --force. This is jjay's own config,
+// distinct from openspec/config.yaml.
+func stepJjayConfig(target string, opts InitOptions) error {
+	w := opts.out()
+	fmt.Fprintln(w, ".jjay/config.yaml:")
+
+	content, err := yaml.Marshal(config.Builtin())
+	if err != nil {
+		return fmt.Errorf("marshal jjay config: %w", err)
+	}
+	header := []byte("# jjay config — per-agent launch/resume command templates.\n" +
+		"# Distinct from openspec/config.yaml. Resolution: this file → " +
+		"~/.config/jjay/config.yaml → built-in, per field (ADR-014).\n")
+	dst := config.ProjectConfigPath(target)
+	r, err := writeFile(opts, dst, append(header, content...))
+	if err != nil {
+		return err
+	}
+	report(opts, ".jjay/config.yaml", r)
+	return nil
+}
+
 func stepAgents(target string, opts InitOptions) error {
 	w := opts.out()
 	fmt.Fprintln(w, "AGENTS.md:")

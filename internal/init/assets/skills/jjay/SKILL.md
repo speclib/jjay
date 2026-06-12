@@ -36,7 +36,7 @@ explore → propose → spawn → status → merge → cleanup
 5. **merge** — `/jjay:merge <change>` rebases the workspace onto current `main` and merges it in (after the change is implemented, verified, and archived).
 6. **cleanup** — `/jjay:cleanup <change>` tears down the workspace, its tmux window, and its directory.
 
-`/jjay:session-open <path>` recreates the tmux view (windows + agents) for spawned workspaces — use it to reattach after a detach or reboot.
+`/jjay:session-open <path>` recreates the tmux view for spawned workspaces — use it to reattach after a detach or reboot. Reopening **resumes** each agent (the configured `resume` command, e.g. `claude --resume`); it does NOT re-run `/opsx:apply` from scratch. `/jjay:tmux-open <workspace>` does the same for a single workspace.
 
 ## Orchestrator vs worker
 
