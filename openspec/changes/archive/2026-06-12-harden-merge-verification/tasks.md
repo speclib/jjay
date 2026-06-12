@@ -31,7 +31,7 @@ These encode the reproduced failures from jjay-q6ko.
 ## 5. Testing — full suite green
 
 - [x] 5.1 New scenarios pass; the prior merge scenarios still pass (12 merge tests green).
-- [x] 5.2 `TestMerge_SmokeDetectsMissingFile` covers the reachable-work L2 path; `TestSmokeTest_L1L2` covers L1/L2 directly.
+- [x] 5.2 `TestMerge_SmokeDetectsMissingFile` covers the reachable-work L2 path; `TestSmokeTest_L1L2` covers L1/L2 directly; `TestSmokeTest_ToleratesArchiveMove` guards the archive-move false positive (L2 matches by basename; net-deletes excluded).
 - [x] 5.3 `go test -tags integration ./...` — entire suite green (incl. `test/integration` lifecycle).
 - [x] 5.4 Instance tests (1.2, 1.4) pass; instance 3 reframed per the spike finding.
 

@@ -16,15 +16,23 @@ NOTE — limitation (spike-confirmed): jj associates exactly one working-copy co
 - **THEN** the post-merge smoke test fails loudly, the workspace is kept, and the failure names the recovery handle — instead of reporting false success
 
 ### Requirement: Merge proves the work landed (post-merge smoke test)
-After merge, `jjay merge` SHALL verify that the workspace's work actually landed on main before reporting success. (L1) If the workspace had work but main gained no changes, the merge SHALL fail. (L2) Every file added or modified across the work frontier, captured before the merge, SHALL be present on main; any missing file SHALL fail the smoke test. The smoke test SHALL be verbose by default (pre-1.0). Content equivalence (L3) is out of scope for this change.
+After merge, `jjay merge` SHALL verify that the workspace's work actually landed on main before reporting success. (L1) If the workspace had work but main gained no changes, the merge SHALL fail. (L2) Every file **added or modified** across the work frontier, captured before the merge, SHALL be present on main; any missing file SHALL fail the smoke test. The capture SHALL exclude files the workspace **deleted** (a net delete is legitimately absent from main), and L2 presence SHALL be satisfied by either the exact path OR the file's basename appearing on main, so that a file legitimately **moved/renamed** by the merge — most importantly an `/opsx:archive` that moves `openspec/changes/X/` → `openspec/changes/archive/<date>-X/` — is not falsely reported missing. The smoke test SHALL be verbose by default (pre-1.0). Content equivalence (L3) is out of scope for this change.
 
 #### Scenario: Empty merge detected
 - **WHEN** the workspace had work but the merge added nothing to main
 - **THEN** the smoke test fails (L1) and merge does not report success
 
 #### Scenario: Missing file detected
-- **WHEN** a file recorded in the pre-merge work-frontier capture is absent from main after merge
+- **WHEN** a file recorded in the pre-merge work-frontier capture is absent from main after merge (by neither its path nor its basename)
 - **THEN** the smoke test fails (L2), naming the expected and missing files
+
+#### Scenario: Archive-move is not a false positive
+- **WHEN** the merge archives the change, moving a captured file from `openspec/changes/X/` to `openspec/changes/archive/<date>-X/` (same basename, different directory)
+- **THEN** L2 treats the file as present (matched by basename) and the smoke test passes
+
+#### Scenario: Deleted file is not expected on main
+- **WHEN** the workspace's net effect deletes a file
+- **THEN** that file is excluded from the captured set and its absence from main does not fail the smoke test
 
 ### Requirement: Merge captures a pre-merge recovery handle
 Before rewriting any commit, `jjay merge` SHALL capture the current `jj` operation id (from `jj op log`) and SHALL include it in any failure message as a recovery handle (`jj op restore <id>`).

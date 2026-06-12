@@ -1,12 +1,13 @@
 ---
 # jjay-q6ko
 title: merging now almost always give a stale error
-status: in-progress
+status: completed
 type: bug
 priority: critical
 created_at: 2026-06-04T22:23:50Z
-updated_at: 2026-06-05T11:58:43Z
+updated_at: 2026-06-12T00:00:00Z
 parent: jjay-hjjg
+openspec-link: openspec/changes/archive/2026-06-12-harden-merge-verification
 ---
 
 this is how I solve it from the workspace claude session:

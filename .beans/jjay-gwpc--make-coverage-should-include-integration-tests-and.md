@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-06-05T00:39:22Z
-updated_at: 2026-06-05T09:36:47Z
+updated_at: 2026-06-12T12:21:58Z
 parent: jjay-hjjg
 ---
 
@@ -26,3 +26,30 @@ Integration tests require tmux AND jj on PATH (`test/integration/helpers_test.go
 
 Found while prepping a release: the user expected `make coverage` to run integration tests and update the README; it does neither on its own.
 Related: jjay-znb0 (created the current targets, archived), jjay-7rol (test-integration output readability).
+
+
+
+## CRITICAL refinement (2026-06-12): -coverpkg is the other (bigger) half
+
+Two separate measurement blind spots, not one. The `-tags integration` fix alone is INSUFFICIENT:
+
+1. `-tags integration` — includes the integration tests. Fixes packages whose tests live IN-package (e.g. internal/merge: 4.8% → 81.6% with the tag).
+
+2. `-coverpkg=./...` — REQUIRED for packages whose tests live in test/integration (a different package). By default `go test -cover ./internal/spawn/` only attributes coverage from tests inside internal/spawn. The spawn integration tests DO call spawn.Spawn() in-process (test/integration/helpers_test.go:139) — but because they live in `package integration`, that exercise is not attributed back to internal/spawn. So spawn shows 5.8% even WITH the tag. Adding `-coverpkg=./internal/spawn/...` attributes it: spawn jumps to ~70% (setupPanes 80%, tmuxTarget 67%, resolveAgentCommand 100%).
+
+Proven numbers (with `-tags integration -coverpkg=./...`):
+- internal/merge:  4.8% → ~82%
+- internal/spawn:  5.8% → ~70%
+Neither package is under-tested; the default measurement was blind in two ways.
+
+## The actual fix (both flags)
+```makefile
+coverage:
+	go test -tags integration -coverpkg=./... -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage: $$(go tool cover -func=coverage.out | grep total | awk '{print $$NF}')"
+```
+- `-tags integration` → runs integration tests (needs tmux+jj on PATH; see caveat above re CI).
+- `-coverpkg=./...` → attributes coverage of ALL packages regardless of which test package exercised them — this is what makes test/integration's exercise of spawn/cleanup/status count.
+
+Note: `-coverpkg=./...` also slightly changes the total (counts every package as a denominator, including main/cmd). Decide whether the badge should reflect that whole-repo number or a curated subset.

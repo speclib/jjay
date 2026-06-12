@@ -1,6 +1,6 @@
 # ADR-013: Verification-gated merge — prove the work landed, gate workspace lifecycle on proof
 
-**Status**: Proposed
+**Status**: Accepted
 
 ## Context
 
@@ -26,7 +26,7 @@ Today merge proves only a negative ("no conflicts"). Conflict-free ≠ merged (j
 1. **Snapshot** the `jj op log` head before any rewrite (recovery handle).
 2. **Define the work** as `WORK = ancestors(<change>@) & main.. & ~empty()` — including `@-` and any ancestor of `@`, not just `<change>@`. Capture the added/modified file set across `WORK`. (Spike-confirmed limitation: a true divergent *sibling* the workspace `@` never descended from is unreachable from `<change>@` — jj links only one `@` per workspace — so it cannot be auto-included; the smoke test detects that case instead. Op-log sibling discovery is a non-goal.)
 3. **Fold + merge** via the existing `advanceMainToHead` (ADR-010) then rebase/merge over `WORK`.
-4. **Smoke test** (rse4 L1+L2): if the workspace had work, main MUST have gained changes (L1); every captured file MUST be present on main (L2).
+4. **Smoke test** (rse4 L1+L2): if the workspace had work, main MUST have gained changes (L1); every captured **added/modified** file MUST be present on main (L2). L2 captures via `jj diff --summary` and keeps only A/M files (net-deleted files are excluded — legitimately absent). Presence is satisfied by exact path **or basename**, so a merge that moves/renames a file — notably an `/opsx:archive` relocating `openspec/changes/X/` → `openspec/changes/archive/<date>-X/` — is not a false positive. (This refinement was forced by a real false positive: a merge that archived its change tripped exact-path L2 while the work was on main at the archived path.)
 5. **Gate the lifecycle on the proof:**
    - **Proven** → forget the jj workspace. No live pointer ⇒ staleness is structurally impossible.
    - **Unproven** → keep the workspace intact, do not advance further, emit a loud structured warning (expected vs missing files + `jj op restore <preMergeOp>`), exit non-zero. No auto-rollback.
@@ -41,3 +41,4 @@ L3 (content equivalence) is deferred (rebase-combination caveat). Auto-rollback 
 - **Negative**: Merge gains real logic (frontier revset, file capture, smoke test) — more than "rebase onto bookmark".
 - **Negative**: Behavior change — a clean merge now forgets the jj workspace (directory cleanup stays in `cleanup`); must be documented.
 - **Negative**: The `heads()` frontier revset must be validated end-to-end against real topologies (ADR-010's lesson), not by unit reasoning alone.
+- **Negative**: L2's basename match is move-tolerant but not exact — two distinct files sharing a basename could mask a genuine miss of one. Accepted pre-1.0: it eliminates the common archive-move false positive (which would otherwise block every merge that archives) while still catching wholesale content loss. Content-level L3 verification remains the documented follow-up.

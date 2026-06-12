@@ -16,7 +16,7 @@
 ### Fixed
 
 - **`jjay merge` now verifies the work landed (no more stale errors)**
-  - merge folds work from the `@-` ancestor frontier (not just `<change>@`), runs a post-merge smoke test (work-frontier files must be on main), and forgets the workspace on success so no stale pointer remains. On an unproven merge it keeps the workspace and prints `jj op restore <id>` instead of reporting false success. A truly orphaned sibling commit remains undetectable (tracked in jjay-ychu). See ADR-013.
+  - merge folds work from the `@-` ancestor frontier (not just `<change>@`), runs a post-merge smoke test (work-frontier files must be on main, matched by path or basename so an `/opsx:archive` move isn't a false positive; net-deletes excluded), and forgets the workspace on success so no stale pointer remains. On an unproven merge it keeps the workspace and prints `jj op restore <id>` instead of reporting false success. A truly orphaned sibling commit remains undetectable (tracked in jjay-ychu). See [proposal](openspec/changes/archive/2026-06-12-harden-merge-verification/proposal.md), ADR-013.
 
 ## 0.3.0 - 2026-06-05
 
